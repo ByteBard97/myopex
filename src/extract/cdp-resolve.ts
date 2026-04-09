@@ -1,6 +1,8 @@
 import type { Page } from 'playwright'
 import type { Bounds } from '../fingerprint/types'
 
+const BATCH_SIZE = 30
+
 export interface ResolvedNode {
   bounds: Bounds
   visible: boolean
@@ -60,33 +62,44 @@ export async function batchResolveVisualProps(
   }`
 
   try {
-    for (const nodeId of backendNodeIds) {
-      try {
-        // Step 1: Resolve backendDOMNodeId → RemoteObjectId
-        const { object } = await client.send('DOM.resolveNode', {
-          backendNodeId: nodeId,
-        })
-        if (!object.objectId) continue
+    // Process in batches to stay within CDP in-flight message limits
+    for (let i = 0; i < backendNodeIds.length; i += BATCH_SIZE) {
+      const batch = backendNodeIds.slice(i, i + BATCH_SIZE)
 
-        // Step 2: Call extraction function on the resolved object
-        const { result } = await client.send('Runtime.callFunctionOn', {
-          objectId: object.objectId,
-          functionDeclaration: extractFnSource,
-          returnByValue: true,
-        })
+      // Step 1: Resolve all backendDOMNodeIds → RemoteObjectIds in parallel
+      const resolvedObjects = await Promise.allSettled(
+        batch.map(async nodeId => {
+          const { object } = await client.send('DOM.resolveNode', { backendNodeId: nodeId })
+          return { nodeId, objectId: object.objectId }
+        }),
+      )
 
-        if (result.value) {
-          const parsed = typeof result.value === 'string'
-            ? JSON.parse(result.value)
-            : result.value
+      // Step 2: Extract visual props from all resolved objects in parallel
+      const extractResults = await Promise.allSettled(
+        resolvedObjects.map(async settled => {
+          if (settled.status === 'rejected') return null
+          const { nodeId, objectId } = settled.value
+          if (!objectId) return null
+
+          const { result } = await client.send('Runtime.callFunctionOn', {
+            objectId,
+            functionDeclaration: extractFnSource,
+            returnByValue: true,
+          })
+          return { nodeId, objectId, value: result.value }
+        }),
+      )
+
+      // Step 3: Collect results and fire-and-forget release
+      for (const settled of extractResults) {
+        if (settled.status === 'rejected' || settled.value === null) continue
+        const { nodeId, objectId, value } = settled.value
+        if (value) {
+          const parsed = typeof value === 'string' ? JSON.parse(value) : value
           results.set(nodeId, parsed)
         }
-
-        // Release the remote object
-        await client.send('Runtime.releaseObject', { objectId: object.objectId })
-      } catch {
-        // Node may be detached, in a shadow DOM, or otherwise unresolvable — skip
-        continue
+        // Release remote object — fire and forget
+        client.send('Runtime.releaseObject', { objectId }).catch(() => undefined)
       }
     }
   } finally {

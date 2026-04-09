@@ -57,4 +57,23 @@ describe('CDP batch resolve', () => {
     const resolved = await batchResolveVisualProps(page, [999999])
     expect(resolved.size).toBe(0)
   })
+
+  it('resolves 10+ nodes in under 3 seconds', async () => {
+    const tree = await extractAccessibilityTree(page)
+    const allIds = collectNodeIds(tree)
+    expect(allIds.length).toBeGreaterThan(10)
+
+    const start = Date.now()
+    const results = await batchResolveVisualProps(page, allIds)
+    const elapsed = Date.now() - start
+
+    expect(elapsed).toBeLessThan(3000)
+    expect(results.size).toBeGreaterThan(0)
+  }, 10000)
+
+  function collectNodeIds(node: any, ids: number[] = []): number[] {
+    if (node.backendDOMNodeId) ids.push(node.backendDOMNodeId)
+    for (const child of node.children ?? []) collectNodeIds(child, ids)
+    return ids
+  }
 })
