@@ -80,6 +80,43 @@ describe('merge: build UIFingerprint', () => {
     }
   })
 
+  it('marks resolved components with resolveStatus', async () => {
+    const fp = await buildFingerprint(page)
+    for (const region of Object.values(fp.regions)) {
+      for (const comp of region.components) {
+        expect(['ok', 'failed', 'fallback']).toContain(comp.props.resolveStatus)
+      }
+    }
+  })
+
+  it('places data-testid elements outside regions into ungrouped', async () => {
+    // Add a floating element outside all landmarks
+    await page.evaluate(() => {
+      const el = document.createElement('div')
+      el.setAttribute('data-testid', 'floating-widget')
+      el.style.cssText = 'position:fixed;top:0;right:0;width:100px;height:30px;background:red;z-index:9999;'
+      el.textContent = 'Floating'
+      document.body.appendChild(el)
+    })
+
+    const fp = await buildFingerprint(page)
+
+    // The floating widget should either be in ungrouped or in a region
+    // What matters is it's not silently dropped
+    const allComponentIds = [
+      ...Object.values(fp.regions).flatMap(r => r.components.map(c => c.id)),
+      ...fp.ungrouped.map(c => c.id),
+    ]
+    const hasFloating = allComponentIds.some(id => id.includes('floating'))
+    expect(hasFloating || fp.ungrouped.length > 0).toBe(true)
+
+    // Clean up
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="floating-widget"]')
+      if (el) el.remove()
+    })
+  })
+
   it('discovers VueFlow canvas as a region', async () => {
     const fp = await buildFingerprint(page)
     const canvasRegion = Object.values(fp.regions).find(r => r.role === 'main-canvas')

@@ -13,6 +13,7 @@ function makeComponent(id: string, overrides: Partial<Component['props']> = {}):
       borderWidth: '1px', opacity: '1', display: 'block',
       overflow: 'visible', textOverflow: false,
       textContent: 'Test', childCount: 0,
+      resolveStatus: 'ok',
       ...overrides,
     },
   }

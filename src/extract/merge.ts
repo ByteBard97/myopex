@@ -85,6 +85,7 @@ export async function buildFingerprint(
   }
 
   // Inject data-testid elements as components into their containing region
+  const ungrouped: Component[] = []
   if (discovery.testIdElements.length > 0) {
     for (const testIdEl of discovery.testIdElements) {
       const visual = await extractViaSelector(page, testIdEl.selector)
@@ -92,17 +93,23 @@ export async function buildFingerprint(
 
       // Find which region contains this element by bounds overlap
       const containingRegion = findContainingRegion(regions, visual.bounds)
-      if (!containingRegion) continue
+      if (containingRegion) {
+        const [regionKey, region] = containingRegion
+        const compId = `${regionKey}/testid["${testIdEl.testId}"]`
+        // Skip if a component with this ID already exists
+        if (region.components.some(c => c.id === compId)) continue
 
-      const [regionKey, region] = containingRegion
-      const compId = `${regionKey}/testid["${testIdEl.testId}"]`
-      // Skip if a component with this ID already exists
-      if (region.components.some(c => c.id === compId)) continue
-
-      region.components.push({
-        id: compId,
-        props: { role: 'generic', name: testIdEl.testId, ...visual },
-      })
+        region.components.push({
+          id: compId,
+          props: { role: 'generic', name: testIdEl.testId, ...visual, resolveStatus: 'fallback' as const },
+        })
+      } else {
+        // Element is outside all regions — add to ungrouped
+        ungrouped.push({
+          id: `ungrouped/testid["${testIdEl.testId}"]`,
+          props: { role: 'generic', name: testIdEl.testId, ...visual, resolveStatus: 'fallback' as const },
+        })
+      }
     }
   }
 
@@ -119,7 +126,7 @@ export async function buildFingerprint(
       capturedAt: new Date().toISOString(),
     },
     regions,
-    ungrouped: [],
+    ungrouped,
     state: {
       name: options?.stateName ?? 'default',
       modals: 'none',
@@ -176,6 +183,7 @@ function buildComponents(
           role: child.role,
           name: child.name,
           ...childVisual,
+          resolveStatus: 'ok' as const,
         }
       : {
           role: child.role,
@@ -192,6 +200,7 @@ function buildComponents(
           textOverflow: false,
           textContent: child.name,
           childCount: child.children?.length ?? 0,
+          resolveStatus: 'failed' as const,
         }
 
     components.push({ id: compId, props })

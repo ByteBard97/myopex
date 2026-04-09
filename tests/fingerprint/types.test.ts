@@ -35,6 +35,7 @@ describe('fingerprint types', () => {
       textOverflow: false,
       textContent: 'Submit',
       childCount: 1,
+      resolveStatus: 'ok',
     }
     expect(props.visible).toBe(true)
     expect(props.bounds.width).toBe(120)
@@ -92,6 +93,7 @@ describe('fingerprint types', () => {
         visible: true, backgroundColor: '', color: '', fontSize: '',
         borderWidth: '', opacity: '1', display: '', overflow: '',
         textOverflow: false, textContent: 'Home', childCount: 0,
+        resolveStatus: 'ok',
       },
     }
     expect(comp.id).toContain('navigation/')
