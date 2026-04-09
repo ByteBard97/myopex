@@ -24,6 +24,10 @@
     <button aria-label="Settings">S</button>
     <button aria-label="Help">?</button>
   </nav>
+  <nav role="navigation" aria-label="Secondary" style="position:fixed;right:0;top:48px;width:48px;height:calc(100vh - 48px);background:#1E293B;">
+    <button aria-label="Profile">P</button>
+    <button aria-label="Logout">X</button>
+  </nav>
   <main role="main">
     <div class="card" data-testid="device-1">
       <h3>Router A</h3>
@@ -32,6 +36,19 @@
     <div class="card" data-testid="device-2">
       <h3>Switch B</h3>
       <p>192.168.1.2</p>
+    </div>
+    <!-- VueFlow canvas mock for framework selector testing -->
+    <div class="vue-flow" data-canvas style="width:600px;height:300px;background:#0D1117;border:1px solid #2A3448;margin-top:16px;position:relative;">
+      <div class="vue-flow__node" data-id="TestDevice1" style="position:absolute;top:20px;left:20px;">
+        <div class="device-node" style="width:120px;height:60px;background:#1A2232;border:1px solid #2A3448;border-radius:4px;padding:8px;">
+          <div class="device-header" style="font-size:12px;">TestDevice1</div>
+        </div>
+      </div>
+      <div class="vue-flow__node" data-id="TestDevice2" style="position:absolute;top:20px;left:200px;">
+        <div class="device-node" style="width:120px;height:60px;background:#1A2232;border:1px solid #2A3448;border-radius:4px;padding:8px;">
+          <div class="device-header" style="font-size:12px;">TestDevice2</div>
+        </div>
+      </div>
     </div>
   </main>
   <footer role="contentinfo">

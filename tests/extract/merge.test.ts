@@ -69,4 +69,21 @@ describe('merge: build UIFingerprint', () => {
     const fp = await buildFingerprint(page)
     expect(fp.state.name).toBe('default')
   })
+
+  it('handles two nav elements with different aria-labels as separate regions', async () => {
+    const fp = await buildFingerprint(page)
+    const navRegions = Object.values(fp.regions).filter(r => r.role === 'navigation')
+    expect(navRegions.length).toBeGreaterThanOrEqual(2)
+    // Each should have its own components, not shared
+    for (const nav of navRegions) {
+      expect(nav.childCount).toBeGreaterThan(0)
+    }
+  })
+
+  it('discovers VueFlow canvas as a region', async () => {
+    const fp = await buildFingerprint(page)
+    const canvasRegion = Object.values(fp.regions).find(r => r.role === 'main-canvas')
+    expect(canvasRegion).toBeDefined()
+    expect(canvasRegion!.bounds.width).toBeGreaterThan(0)
+  })
 })

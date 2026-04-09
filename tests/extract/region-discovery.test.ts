@@ -65,6 +65,34 @@ describe('region discovery', () => {
     expect(testIdElements.some(t => t.testId === 'device-2')).toBe(true)
   })
 
+  it('discovers two nav elements with different aria-labels as separate regions', async () => {
+    await page.goto(`file://${join(__dirname, '../../fixtures/sample-page.html')}`)
+    await page.waitForTimeout(300)
+
+    const { regions } = await discoverRegions(page)
+    const navRegions = regions.filter(r => r.role === 'navigation')
+    expect(navRegions.length).toBeGreaterThanOrEqual(2)
+    // They should have different names
+    const names = navRegions.map(r => r.name)
+    expect(names).toContain('Main navigation')
+    expect(names).toContain('Secondary')
+  })
+
+  it('discovers VueFlow canvas and individual nodes as regions', async () => {
+    await page.goto(`file://${join(__dirname, '../../fixtures/sample-page.html')}`)
+    await page.waitForTimeout(300)
+
+    const { regions } = await discoverRegions(page)
+    const canvasRegion = regions.find(r => r.role === 'main-canvas')
+    expect(canvasRegion).toBeDefined()
+    expect(canvasRegion!.name).toBe('Canvas')
+
+    const nodeRegions = regions.filter(r => r.role === 'canvas-node')
+    expect(nodeRegions.length).toBeGreaterThanOrEqual(2)
+    expect(nodeRegions.map(r => r.name)).toContain('TestDevice1')
+    expect(nodeRegions.map(r => r.name)).toContain('TestDevice2')
+  })
+
   it('uses config selectors when provided', async () => {
     await page.setContent(`
       <html><body>

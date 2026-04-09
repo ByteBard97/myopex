@@ -1,5 +1,6 @@
 import type { Page } from 'playwright'
 import { extractAccessibilityTree, extractLandmarks, type AXNode } from './accessibility'
+import { FRAMEWORK_SELECTORS } from '../constants'
 
 export interface DiscoveredRegion {
   role: string
@@ -21,9 +22,10 @@ export interface DiscoveryResult {
 }
 
 /**
- * Discover UI regions via a 4-level fallback chain:
+ * Discover UI regions via a 5-level fallback chain:
  *   1. ARIA landmarks (CDP accessibility tree)
  *   2. Semantic HTML sectioning elements (header, nav, main, aside, footer)
+ *   2.5. Framework-specific selectors (VueFlow, React Flow, etc.)
  *   3. [data-testid] elements — collected as components within regions, not as regions
  *   4. Config file selectors (optional, additive)
  *
@@ -35,7 +37,12 @@ export async function discoverRegions(
   config?: DiscoveryConfig,
 ): Promise<DiscoveryResult> {
   const regions: DiscoveredRegion[] = []
-  const foundRoles = new Set<string>()
+  // Tracks unique landmark keys (role|name) to prevent exact duplicates
+  const foundKeys = new Set<string>()
+  // Tracks which bare roles have been found by Level 1 — used only by Level 2
+  // to avoid duplicating landmarks already discovered via ARIA.
+  // Intentionally does NOT block multiple landmarks with the same role but different names.
+  const rolesFoundByLevel1 = new Set<string>()
   let axTree: AXNode | null = null
 
   // --- Level 1: ARIA landmarks from accessibility tree ---
@@ -45,10 +52,9 @@ export async function discoverRegions(
 
     for (const landmark of landmarks) {
       const key = landmark.role + (landmark.name ? `|${landmark.name}` : '')
-      if (foundRoles.has(key)) continue
-      foundRoles.add(key)
-      // Also mark the bare role so Level 2 won't duplicate it
-      foundRoles.add(landmark.role)
+      if (foundKeys.has(key)) continue
+      foundKeys.add(key)
+      rolesFoundByLevel1.add(landmark.role)
 
       regions.push({
         role: landmark.role,
@@ -72,16 +78,46 @@ export async function discoverRegions(
   }
 
   for (const [tag, role] of Object.entries(semanticMap)) {
-    if (foundRoles.has(role)) continue
+    if (rolesFoundByLevel1.has(role)) continue
     const count = await page.locator(tag).count()
     if (count > 0) {
-      foundRoles.add(role)
+      foundKeys.add(role)
       regions.push({
         role,
         name: role,
         selector: tag,
         source: 'semantic-html',
       })
+    }
+  }
+
+  // --- Level 2.5: Framework-specific selectors (VueFlow, React Flow, etc.) ---
+  for (const fw of FRAMEWORK_SELECTORS) {
+    const count = await page.locator(fw.selector).count()
+    if (count > 0 && !foundKeys.has(fw.role)) {
+      foundKeys.add(fw.role)
+      regions.push({
+        role: fw.role,
+        name: fw.name,
+        selector: fw.selector,
+        source: 'config-selector',
+      })
+
+      // For canvas regions, enumerate individual VueFlow nodes as sub-regions
+      if (fw.role === 'main-canvas') {
+        const nodeCount = await page.locator('.vue-flow__node').count()
+        for (let i = 0; i < Math.min(nodeCount, 10); i++) {
+          const nodeId = await page.locator('.vue-flow__node').nth(i).getAttribute('data-id')
+          if (nodeId) {
+            regions.push({
+              role: 'canvas-node',
+              name: nodeId,
+              selector: `.vue-flow__node[data-id="${nodeId}"] .device-node, .vue-flow__node[data-id="${nodeId}"] .cdn-node`,
+              source: 'config-selector',
+            })
+          }
+        }
+      }
     }
   }
 
