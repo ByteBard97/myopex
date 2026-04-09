@@ -1,14 +1,25 @@
 // src/diff.ts
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { deserializeFingerprint } from './fingerprint/yaml'
 import { diffFingerprints } from './fingerprint/diff-engine'
 
-export async function runDiff(oldDir: string, newDir: string, stateName: string): Promise<void> {
-  const filename = stateName === 'default' ? 'fingerprint.yaml' : `fingerprint-${stateName}.yaml`
+/** Find the fingerprint YAML file in a directory. Tries exact state name first, then any .yaml file. */
+function loadFingerprint(dir: string, stateName: string): string {
+  const exact = stateName === 'default' ? 'fingerprint.yaml' : `fingerprint-${stateName}.yaml`
+  try {
+    return readFileSync(join(dir, exact), 'utf-8')
+  } catch {
+    // Fallback: find any fingerprint-*.yaml in the directory
+    const files = readdirSync(dir).filter(f => f.startsWith('fingerprint') && f.endsWith('.yaml'))
+    if (files.length === 0) throw new Error(`No fingerprint YAML found in ${dir}`)
+    return readFileSync(join(dir, files[0]), 'utf-8')
+  }
+}
 
-  const oldFp = deserializeFingerprint(readFileSync(join(oldDir, filename), 'utf-8'))
-  const newFp = deserializeFingerprint(readFileSync(join(newDir, filename), 'utf-8'))
+export async function runDiff(oldDir: string, newDir: string, stateName: string): Promise<void> {
+  const oldFp = deserializeFingerprint(loadFingerprint(oldDir, stateName))
+  const newFp = deserializeFingerprint(loadFingerprint(newDir, stateName))
 
   const report = diffFingerprints(oldFp, newFp)
 
