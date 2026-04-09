@@ -29,24 +29,42 @@ export async function runCapture(url: string, outDir: string, stateName: string)
   const options: BuildOptions = { stateName }
   const fp = await buildFingerprint(page, options)
 
-  // Per-component screenshots using bounds-based clipping (avoids selector ambiguity)
+  // Screenshots: capture each region + each component
   const screenshotDir = join(outDir, 'screenshots')
   mkdirSync(screenshotDir, { recursive: true })
-  for (const region of Object.values(fp.regions)) {
+
+  for (const [regionKey, region] of Object.entries(fp.regions)) {
+    const rb = region.bounds
+    if (rb.width > 0 && rb.height > 0) {
+      const slug = regionKey.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 60)
+      const filename = `region-${slug}.png`
+      try {
+        await page.screenshot({
+          path: join(screenshotDir, filename),
+          type: 'png',
+          clip: { x: rb.x, y: rb.y, width: Math.min(rb.width, 1440), height: Math.min(rb.height, 900) },
+        })
+        ;(region as Record<string, unknown>)._screenshotFile = `screenshots/${filename}`
+      } catch {
+        // Region may be partially offscreen
+      }
+    }
+
+    // Component-level screenshots
     for (const comp of region.components) {
       const b = comp.props.bounds
       if (comp.props.visible && b.width > 0 && b.height > 0) {
-        const slug = comp.id.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 60)
-        const filename = `${slug}.png`
+        const compSlug = comp.id.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 60)
+        const compFilename = `${compSlug}.png`
         try {
           await page.screenshot({
-            path: join(screenshotDir, filename),
+            path: join(screenshotDir, compFilename),
             type: 'png',
             clip: { x: b.x, y: b.y, width: b.width, height: b.height },
           })
-          comp.props.screenshotFile = `screenshots/${filename}`
+          comp.props.screenshotFile = `screenshots/${compFilename}`
         } catch {
-          // Element may be offscreen or have invalid bounds
+          // Element may be offscreen
         }
       }
     }
