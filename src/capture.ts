@@ -3,7 +3,7 @@ import { chromium } from 'playwright'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { buildFingerprint, type BuildOptions } from './extract/merge'
-import { captureComponentScreenshot, captureFullPage } from './extract/screenshots'
+import { captureFullPage } from './extract/screenshots'
 import { serializeFingerprint } from './fingerprint/yaml'
 import { DEFAULT_VIEWPORT, SETTLE_MS } from './constants'
 
@@ -28,19 +28,24 @@ export async function runCapture(url: string, outDir: string, stateName: string)
   const options: BuildOptions = { stateName }
   const fp = await buildFingerprint(page, options)
 
-  // Per-region screenshots using region selectors
+  // Per-component screenshots using bounds-based clipping (avoids selector ambiguity)
   const screenshotDir = join(outDir, 'screenshots')
-  for (const [regionKey, region] of Object.entries(fp.regions)) {
+  mkdirSync(screenshotDir, { recursive: true })
+  for (const region of Object.values(fp.regions)) {
     for (const comp of region.components) {
-      if (comp.props.visible && comp.props.bounds.width > 0) {
+      const b = comp.props.bounds
+      if (comp.props.visible && b.width > 0 && b.height > 0) {
         const slug = comp.id.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 60)
-        // Attempt screenshot via role+name selector within the region
-        const selector = comp.props.name
-          ? `[aria-label="${comp.props.name}"]`
-          : `[role="${comp.props.role}"]`
-        const file = await captureComponentScreenshot(page, selector, screenshotDir, slug)
-        if (file) {
-          comp.props.screenshotFile = `screenshots/${file}`
+        const filename = `${slug}.png`
+        try {
+          await page.screenshot({
+            path: join(screenshotDir, filename),
+            type: 'png',
+            clip: { x: b.x, y: b.y, width: b.width, height: b.height },
+          })
+          comp.props.screenshotFile = `screenshots/${filename}`
+        } catch {
+          // Element may be offscreen or have invalid bounds
         }
       }
     }

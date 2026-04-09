@@ -68,8 +68,10 @@ export async function buildFingerprint(
       if (!regionVisual) continue
     }
 
-    // Build child components from AX tree children
-    const children = landmarkChildMap.get(discovered.role) ?? []
+    // Build child components from AX tree children (keyed by backendDOMNodeId to avoid role collisions)
+    const children = discovered.backendDOMNodeId
+      ? landmarkChildMap.get(discovered.backendDOMNodeId) ?? []
+      : []
     const components = buildComponents(regionKey, children, resolvedProps)
 
     regions[regionKey] = {
@@ -78,6 +80,28 @@ export async function buildFingerprint(
       background: regionVisual.backgroundColor,
       childCount: regionVisual.childCount,
       components,
+    }
+  }
+
+  // Inject data-testid elements as components into their containing region
+  if (discovery.testIdElements.length > 0) {
+    for (const testIdEl of discovery.testIdElements) {
+      const visual = await extractViaSelector(page, testIdEl.selector)
+      if (!visual || !visual.visible) continue
+
+      // Find which region contains this element by bounds overlap
+      const containingRegion = findContainingRegion(regions, visual.bounds)
+      if (!containingRegion) continue
+
+      const [regionKey, region] = containingRegion
+      const compId = `${regionKey}/testid["${testIdEl.testId}"]`
+      // Skip if a component with this ID already exists
+      if (region.components.some(c => c.id === compId)) continue
+
+      region.components.push({
+        id: compId,
+        props: { role: 'generic', name: testIdEl.testId, ...visual },
+      })
     }
   }
 
@@ -103,22 +127,23 @@ export async function buildFingerprint(
   }
 }
 
-/** Map each landmark role to its direct AX children for component enumeration */
+/**
+ * Map each region's backendDOMNodeId to its direct AX children for component enumeration.
+ * Keyed by backendDOMNodeId (not role) to avoid collisions when multiple regions share
+ * the same role (e.g., two <nav> elements).
+ */
 function buildLandmarkChildMap(
   tree: AXNode,
   regions: Array<{ role: string; backendDOMNodeId?: number }>,
-): Map<string, AXNode[]> {
-  const result = new Map<string, AXNode[]>()
+): Map<number, AXNode[]> {
+  const result = new Map<number, AXNode[]>()
   const targetIds = new Set(
     regions.map(r => r.backendDOMNodeId).filter((id): id is number => id != null),
   )
 
   function walk(node: AXNode) {
     if (node.backendDOMNodeId && targetIds.has(node.backendDOMNodeId)) {
-      const region = regions.find(r => r.backendDOMNodeId === node.backendDOMNodeId)
-      if (region) {
-        result.set(region.role, node.children ?? [])
-      }
+      result.set(node.backendDOMNodeId, node.children ?? [])
     }
     for (const child of node.children ?? []) walk(child)
   }
@@ -225,6 +250,23 @@ async function extractViaSelector(
       childCount: h.children.length,
     }
   })
+}
+
+/** Find the region whose bounds contain the given element bounds */
+function findContainingRegion(
+  regions: Record<string, Region>,
+  bounds: { x: number; y: number; width: number; height: number },
+): [string, Region] | null {
+  const cx = bounds.x + bounds.width / 2
+  const cy = bounds.y + bounds.height / 2
+
+  for (const [key, region] of Object.entries(regions)) {
+    const rb = region.bounds
+    if (cx >= rb.x && cx <= rb.x + rb.width && cy >= rb.y && cy <= rb.y + rb.height) {
+      return [key, region]
+    }
+  }
+  return null
 }
 
 function buildRegionKey(role: string, name: string): string {
