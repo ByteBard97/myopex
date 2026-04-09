@@ -71,8 +71,8 @@ export function diffFingerprints(
 
       for (const [prop, tolerance] of Object.entries(NUMERIC_TOLERANCES)) {
         totalChecked++
-        const bVal = (baseComp.props.bounds as Record<string, number>)[prop]
-        const cVal = (currComp.props.bounds as Record<string, number>)[prop]
+        const bVal = (baseComp.props.bounds as unknown as Record<string, number>)[prop]
+        const cVal = (currComp.props.bounds as unknown as Record<string, number>)[prop]
         if (typeof bVal === 'number' && typeof cVal === 'number') {
           if (Math.abs(bVal - cVal) > tolerance) {
             failures.push({
