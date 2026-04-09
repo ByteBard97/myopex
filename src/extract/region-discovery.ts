@@ -123,10 +123,12 @@ export async function discoverRegions(
 
   // --- Level 3: Collect [data-testid] elements as components (not regions) ---
   const testIdElements: Array<{ selector: string; testId: string }> = []
+  const seenTestIds = new Set<string>()
   const testIdCount = await page.locator('[data-testid]').count()
   for (let i = 0; i < testIdCount; i++) {
     const testId = await page.locator('[data-testid]').nth(i).getAttribute('data-testid')
-    if (testId) {
+    if (testId && !seenTestIds.has(testId)) {
+      seenTestIds.add(testId)
       testIdElements.push({ selector: `[data-testid="${testId}"]`, testId })
     }
   }
