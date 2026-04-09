@@ -59,36 +59,39 @@ export async function batchResolveVisualProps(
     });
   }`
 
-  for (const nodeId of backendNodeIds) {
-    try {
-      // Step 1: Resolve backendDOMNodeId → RemoteObjectId
-      const { object } = await client.send('DOM.resolveNode', {
-        backendNodeId: nodeId,
-      })
-      if (!object.objectId) continue
+  try {
+    for (const nodeId of backendNodeIds) {
+      try {
+        // Step 1: Resolve backendDOMNodeId → RemoteObjectId
+        const { object } = await client.send('DOM.resolveNode', {
+          backendNodeId: nodeId,
+        })
+        if (!object.objectId) continue
 
-      // Step 2: Call extraction function on the resolved object
-      const { result } = await client.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
-        functionDeclaration: extractFnSource,
-        returnByValue: true,
-      })
+        // Step 2: Call extraction function on the resolved object
+        const { result } = await client.send('Runtime.callFunctionOn', {
+          objectId: object.objectId,
+          functionDeclaration: extractFnSource,
+          returnByValue: true,
+        })
 
-      if (result.value) {
-        const parsed = typeof result.value === 'string'
-          ? JSON.parse(result.value)
-          : result.value
-        results.set(nodeId, parsed)
+        if (result.value) {
+          const parsed = typeof result.value === 'string'
+            ? JSON.parse(result.value)
+            : result.value
+          results.set(nodeId, parsed)
+        }
+
+        // Release the remote object
+        await client.send('Runtime.releaseObject', { objectId: object.objectId })
+      } catch {
+        // Node may be detached, in a shadow DOM, or otherwise unresolvable — skip
+        continue
       }
-
-      // Release the remote object
-      await client.send('Runtime.releaseObject', { objectId: object.objectId })
-    } catch {
-      // Node may be detached, in a shadow DOM, or otherwise unresolvable — skip
-      continue
     }
+  } finally {
+    await client.detach()
   }
 
-  await client.detach()
   return results
 }
