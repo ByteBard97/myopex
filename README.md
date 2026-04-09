@@ -92,6 +92,7 @@ regions:
           display: block
           textContent: H
           childCount: 0
+          resolveStatus: ok
           screenshotFile: screenshots/navigation-main-navigation-button--Home--.png
 ungrouped: []
 state:
@@ -103,6 +104,8 @@ state:
 Key features:
 - **Regions** group components by ARIA landmarks, with visual properties resolved via CDP
 - **Component IDs** use composite keys: `regionKey/role["name"]` for stable cross-version matching
+- **`resolveStatus`** — `ok` (CDP resolved), `fallback` (selector-based), or `failed` (extraction failed)
+- **`ungrouped`** — data-testid elements that fall outside all discovered regions (not silently dropped)
 - **`_estimated_tokens`** per region helps agents budget context window usage
 - **`screenshotFile`** links to per-component PNGs for visual inspection
 
@@ -111,12 +114,13 @@ Key features:
 ```
 Page load
   → CDP Accessibility.getFullAXTree()
-  → Region discovery (4-level fallback):
+  → Region discovery (5-level fallback):
       1. ARIA landmarks (banner, navigation, main, complementary, contentinfo)
       2. Semantic HTML (<header>, <nav>, <main>, <aside>, <footer>)
+      2.5. Framework selectors (VueFlow .vue-flow, React Flow, [data-canvas])
       3. [data-testid] elements (collected as components, not regions)
       4. Config file selectors (optional, additive)
-  → CDP DOM.resolveNode + Runtime.callFunctionOn per node
+  → Batched CDP DOM.resolveNode + Runtime.callFunctionOn (30 nodes per batch)
       (backendDOMNodeId → RemoteObjectId → getComputedStyle + getBoundingClientRect)
   → Merge into UIFingerprint hierarchy
   → YAML serialization + per-component screenshots
@@ -126,18 +130,29 @@ The CDP bridge is necessary because `backendDOMNodeId` is a CDP concept that doe
 
 ## Diff engine
 
-The `verify` and `diff` commands run two kinds of checks:
+The `verify` and `diff` commands produce a `FullDiffReport` with two separated sections:
 
-**Invariant checks** (on all current components):
+**Invariant checks** (on all current components, skipping `resolveStatus: failed`):
 - Element not visible
 - Transparent background (theme not applied?)
 - Text overflow / truncation
 - Zero width or height
 
-**Baseline comparison** (matched by composite ID):
+**Regression checks** (matched by composite ID against baseline):
 - Exact: `visible`, `backgroundColor`, `display`, `textOverflow`
 - Numeric tolerance: `bounds.width` (±50px), `bounds.height` (±30px), `bounds.x`/`bounds.y` (±100px)
 - Missing / added regions and components
+
+The report separates these because they require different responses: invariant failures indicate bugs in the current page regardless of baseline, while regressions indicate changes from a known-good state.
+
+## Schema validation
+
+YAML fingerprints are validated on deserialize (no external dependencies). The validator checks:
+- `version` must be `2`
+- Required `page` block with url, title, background, layout, capturedAt, viewport, landmarks
+- Required `regions`, `state`, and `ungrouped` blocks
+
+Invalid or corrupted YAML files throw descriptive errors instead of silently producing broken data.
 
 ## CI integration
 
@@ -165,7 +180,7 @@ The YAML is stable, diffable, and compact. Screenshots are a fallback for visual
 - **Playwright** — browser automation + element screenshots
 - **Chrome DevTools Protocol** — accessibility tree + DOM node resolution
 - **yaml** — YAML serialize/deserialize
-- **vitest** — 39 tests across 9 test files
+- **vitest** — 54 tests across 10 test files
 
 ## License
 
