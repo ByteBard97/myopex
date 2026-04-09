@@ -44,7 +44,8 @@ describe('diff engine', () => {
     const fp = makeFingerprint({ main: region })
     const report = diffFingerprints(fp, fp)
     expect(report.pass).toBe(true)
-    expect(report.failed).toBe(0)
+    expect(report.invariants.failures.length).toBe(0)
+    expect(report.regressions.failures.length).toBe(0)
   })
 
   it('detects transparent background invariant violation', () => {
@@ -56,7 +57,7 @@ describe('diff engine', () => {
     const fp = makeFingerprint({ main: region })
     const report = diffFingerprints(fp, fp)
     expect(report.pass).toBe(false)
-    expect(report.failures.some(f => f.property === 'backgroundColor')).toBe(true)
+    expect(report.invariants.failures.some(f => f.property === 'backgroundColor')).toBe(true)
   })
 
   it('detects text overflow invariant violation', () => {
@@ -68,6 +69,7 @@ describe('diff engine', () => {
     const fp = makeFingerprint({ main: region })
     const report = diffFingerprints(fp, fp)
     expect(report.pass).toBe(false)
+    expect(report.invariants.failures.some(f => f.property === 'textOverflow')).toBe(true)
   })
 
   it('detects missing region', () => {
@@ -79,7 +81,7 @@ describe('diff engine', () => {
       main: { role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 }, background: '#000', childCount: 0, components: [] },
     })
     const report = diffFingerprints(old, current)
-    expect(report.missing).toContain('banner')
+    expect(report.regressions.missing).toContain('banner')
   })
 
   it('detects background color change from baseline', () => {
@@ -97,7 +99,7 @@ describe('diff engine', () => {
     const current = makeFingerprint({ main: region2 })
     const report = diffFingerprints(old, current)
     expect(report.pass).toBe(false)
-    expect(report.failures.some(f =>
+    expect(report.regressions.failures.some(f =>
       f.property === 'backgroundColor' && f.expected === 'rgb(26, 34, 50)'
     )).toBe(true)
   })
@@ -113,8 +115,8 @@ describe('diff engine', () => {
     const fp = makeFingerprint({ main: region })
     const report = diffFingerprints(fp, fp)
     expect(report.pass).toBe(false)
-    expect(report.failures.some(f => f.property === 'bounds.width')).toBe(true)
-    expect(report.failures.some(f => f.property === 'bounds.height')).toBe(true)
+    expect(report.invariants.failures.some(f => f.property === 'bounds.width')).toBe(true)
+    expect(report.invariants.failures.some(f => f.property === 'bounds.height')).toBe(true)
   })
 
   it('matches components by composite ID, not by index', () => {
@@ -135,7 +137,42 @@ describe('diff engine', () => {
     })
     const report = diffFingerprints(old, current)
     // Save should be missing, Cancel should match
-    expect(report.failures.some(f => f.component === 'main/button["Save"]' && f.property === 'exists')).toBe(true)
-    expect(report.failures.some(f => f.component === 'main/button["Cancel"]')).toBe(false)
+    expect(report.regressions.failures.some(f => f.component === 'main/button["Save"]' && f.property === 'exists')).toBe(true)
+    expect(report.regressions.failures.some(f => f.component === 'main/button["Cancel"]')).toBe(false)
+  })
+
+  it('returns separate invariant and regression reports', () => {
+    const base: Region = {
+      role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 },
+      background: '#000', childCount: 1,
+      components: [makeComponent('main/generic[0]', { backgroundColor: 'rgb(26, 34, 50)' })],
+    }
+    const curr: Region = {
+      role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 },
+      background: '#000', childCount: 1,
+      components: [makeComponent('main/generic[0]', { backgroundColor: 'rgba(0, 0, 0, 0)' })],
+    }
+    const report = diffFingerprints(makeFingerprint({ main: base }), makeFingerprint({ main: curr }))
+
+    // Invariant: transparent background
+    expect(report.invariants.failures.length).toBeGreaterThan(0)
+    expect(report.invariants.failures[0].message).toContain('transparent')
+
+    // Regression: color changed from original
+    expect(report.regressions.failures.length).toBeGreaterThan(0)
+    expect(report.regressions.failures[0].expected).toBe('rgb(26, 34, 50)')
+  })
+
+  it('pass is false when only invariant failures exist', () => {
+    const region: Region = {
+      role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 },
+      background: '#000', childCount: 1,
+      components: [makeComponent('main/generic[0]', { backgroundColor: 'rgba(0, 0, 0, 0)' })],
+    }
+    const fp = makeFingerprint({ main: region })
+    const report = diffFingerprints(fp, fp)
+    expect(report.pass).toBe(false)
+    expect(report.invariants.failures.length).toBeGreaterThan(0)
+    expect(report.regressions.failures.length).toBe(0)
   })
 })

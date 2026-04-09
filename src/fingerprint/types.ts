@@ -88,3 +88,42 @@ export interface DiffReport {
   added: string[]
   failures: DiffFailure[]
 }
+
+export interface InvariantFailure {
+  component: string
+  region: string
+  property: string
+  value: string | number | boolean
+  message: string
+  screenshotFile?: string | null
+}
+
+export interface InvariantReport {
+  failures: InvariantFailure[]
+  checked: number
+}
+
+export interface RegressionFailure {
+  component: string
+  region: string
+  property: string
+  expected: string | number | boolean
+  actual: string | number | boolean
+  screenshotFile?: string | null
+}
+
+export interface RegressionReport {
+  failures: RegressionFailure[]
+  checked: number
+  missing: string[]
+  added: string[]
+}
+
+export interface FullDiffReport {
+  pass: boolean
+  timestamp: string
+  source: string
+  target: string
+  invariants: InvariantReport
+  regressions: RegressionReport
+}

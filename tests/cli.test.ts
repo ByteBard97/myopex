@@ -42,6 +42,7 @@ describe('CLI integration', () => {
     expect(existsSync(join(OUT_DIR, 'report.json'))).toBe(true)
     const report = JSON.parse(readFileSync(join(OUT_DIR, 'report.json'), 'utf-8'))
     expect(report).toHaveProperty('pass')
-    expect(report).toHaveProperty('failures')
+    expect(report).toHaveProperty('invariants')
+    expect(report).toHaveProperty('regressions')
   })
 })
