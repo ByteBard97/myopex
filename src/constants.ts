@@ -20,3 +20,14 @@ export const INVARIANTS = [
 export const DEFAULT_VIEWPORT = { width: 1440, height: 900 }
 export const SETTLE_MS = 4000
 export const AUTO_SERVER_PORT = 5198
+
+/**
+ * Framework-specific selectors auto-discovered as regions when present.
+ * Handles cases where ARIA landmarks and semantic HTML are absent
+ * (e.g., VueFlow canvas, React Flow, Konva).
+ */
+export const FRAMEWORK_SELECTORS: Array<{ selector: string; role: string; name: string }> = [
+  { selector: '.vue-flow', role: 'main-canvas', name: 'Canvas' },
+  { selector: '.vue-flow__controls', role: 'toolbar', name: 'Canvas Controls' },
+  { selector: '[data-canvas]', role: 'main-canvas', name: 'Canvas' },
+]
