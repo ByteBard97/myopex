@@ -232,7 +232,7 @@ async function extractViaSelector(
   const count = await page.locator(selector).count()
   if (count === 0) return undefined
 
-  return page.locator(selector).first().evaluate(/** Logic MUST match EXTRACT_FN_SOURCE in visual-props.ts */ (el) => {
+  return page.locator(selector).first().evaluate(/** Same properties as EXTRACT_FN_SOURCE in visual-props.ts (no JSON.stringify — evaluate returns objects directly) */ (el) => {
     const rect = el.getBoundingClientRect()
     const cs = window.getComputedStyle(el)
     const h = el as HTMLElement

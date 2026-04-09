@@ -68,28 +68,6 @@ export interface UIFingerprint {
   state: FingerprintState
 }
 
-export interface DiffFailure {
-  component: string
-  region: string
-  property: string
-  expected: string | number | boolean
-  actual: string | number | boolean
-  screenshotFile?: string | null
-}
-
-export interface DiffReport {
-  pass: boolean
-  timestamp: string
-  old: string
-  new: string
-  totalChecked: number
-  passed: number
-  failed: number
-  missing: string[]
-  added: string[]
-  failures: DiffFailure[]
-}
-
 export interface InvariantFailure {
   component: string
   region: string
