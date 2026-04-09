@@ -1,7 +1,7 @@
 import type { Page } from 'playwright'
 import type { UIFingerprint, Region, Component, ElementProps } from '../fingerprint/types'
 import { extractAccessibilityTree, type AXNode } from './accessibility'
-import { discoverRegions, type DiscoveryConfig } from './region-discovery'
+import { discoverRegions, type DiscoveryConfig, type DiscoveryResult } from './region-discovery'
 import { batchResolveVisualProps, type ResolvedNode } from './cdp-resolve'
 
 export interface BuildOptions {
@@ -24,11 +24,11 @@ export async function buildFingerprint(
   const title = await page.title()
   const viewport = page.viewportSize() ?? { width: 1440, height: 900 }
 
-  // Step 1: Discover regions
-  const discoveredRegions = await discoverRegions(page, options?.discoveryConfig)
-
-  // Step 2: Get accessibility tree for child enumeration
-  const axTree = await extractAccessibilityTree(page)
+  // Step 1: Discover regions (returns AX tree for reuse — single CDP call)
+  const discovery: DiscoveryResult = await discoverRegions(page, options?.discoveryConfig)
+  const discoveredRegions = discovery.regions
+  // Reuse AX tree from discovery — avoids a second CDP Accessibility.getFullAXTree call
+  const axTree = discovery.axTree ?? await extractAccessibilityTree(page)
 
   // Step 3: Collect all backendDOMNodeIds we need to resolve
   const allNodeIds = new Set<number>()

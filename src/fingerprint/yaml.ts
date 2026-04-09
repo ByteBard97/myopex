@@ -9,12 +9,14 @@ const YAML_OPTS = {
 }
 
 export function serializeFingerprint(fp: UIFingerprint): string {
-  // Compute _estimated_tokens per region before serialization
-  for (const region of Object.values(fp.regions)) {
+  // Compute _estimated_tokens per region on a shallow copy to avoid mutating input
+  const regionsWithTokens: Record<string, typeof fp.regions[string]> = {}
+  for (const [key, region] of Object.entries(fp.regions)) {
     const regionYaml = stringify(region, YAML_OPTS)
-    region._estimated_tokens = Math.ceil(regionYaml.length / 4)
+    regionsWithTokens[key] = { ...region, _estimated_tokens: Math.ceil(regionYaml.length / 4) }
   }
-  return stringify(fp, YAML_OPTS)
+  const output = { ...fp, regions: regionsWithTokens }
+  return stringify(output, YAML_OPTS)
 }
 
 export function deserializeFingerprint(yamlStr: string): UIFingerprint {

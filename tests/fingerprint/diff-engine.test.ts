@@ -102,6 +102,21 @@ describe('diff engine', () => {
     )).toBe(true)
   })
 
+  it('detects zero-size invariant via bounds.width and bounds.height', () => {
+    const region: Region = {
+      role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 },
+      background: '#000', childCount: 1,
+      components: [makeComponent('main/generic[0]', {
+        bounds: { x: 0, y: 0, width: 0, height: 0 },
+      })],
+    }
+    const fp = makeFingerprint({ main: region })
+    const report = diffFingerprints(fp, fp)
+    expect(report.pass).toBe(false)
+    expect(report.failures.some(f => f.property === 'bounds.width')).toBe(true)
+    expect(report.failures.some(f => f.property === 'bounds.height')).toBe(true)
+  })
+
   it('matches components by composite ID, not by index', () => {
     const old = makeFingerprint({
       main: { role: 'main', bounds: { x: 0, y: 0, width: 1440, height: 900 }, background: '#000', childCount: 2,
