@@ -1,14 +1,16 @@
 // src/cli.ts
+import { runCapture } from './capture'
+import { runVerify } from './verify'
+import { runDiff } from './diff'
+import { startServer } from './server'
+import type { ChildProcess } from 'child_process'
+
 const args = process.argv.slice(2)
 const command = args[0]
 
 function getFlag(name: string): string | undefined {
   const idx = args.indexOf(`--${name}`)
   return idx !== -1 ? args[idx + 1] : undefined
-}
-
-function hasFlag(name: string): boolean {
-  return args.includes(`--${name}`)
 }
 
 function printUsage() {
@@ -35,7 +37,50 @@ async function main() {
     printUsage()
     process.exit(0)
   }
-  console.log(`${command} not yet implemented`)
+
+  const stateName = getFlag('state') ?? 'default'
+  let serverProc: ChildProcess | null = null
+
+  try {
+    if (command === 'capture') {
+      let url = getFlag('url')
+      if (!url) {
+        const server = await startServer()
+        url = server.url
+        serverProc = server.process
+      }
+      const outDir = getFlag('out') ?? '.ui-audit'
+      console.log(`Capturing from ${url}...`)
+      await runCapture(url, outDir, stateName)
+      console.log('Done.')
+    }
+
+    if (command === 'verify') {
+      let url = getFlag('url')
+      if (!url) {
+        const server = await startServer()
+        url = server.url
+        serverProc = server.process
+      }
+      const baselineDir = getFlag('baseline') ?? '.ui-audit'
+      console.log(`Verifying ${url} against baseline...`)
+      const pass = await runVerify(url, baselineDir, stateName)
+      if (serverProc) serverProc.kill()
+      process.exit(pass ? 0 : 1)
+    }
+
+    if (command === 'diff') {
+      const oldDir = getFlag('old')
+      const newDir = getFlag('new')
+      if (!oldDir || !newDir) {
+        console.error('diff requires --old and --new directories')
+        process.exit(1)
+      }
+      await runDiff(oldDir, newDir, stateName)
+    }
+  } finally {
+    if (serverProc) serverProc.kill()
+  }
 }
 
 main().catch(err => {
