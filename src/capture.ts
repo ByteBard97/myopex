@@ -5,9 +5,10 @@ import { join } from 'path'
 import { buildFingerprint, type BuildOptions } from './extract/merge'
 import { captureFullPage } from './extract/screenshots'
 import { serializeFingerprint } from './fingerprint/yaml'
+import type { UIFingerprint } from './fingerprint/types'
 import { DEFAULT_VIEWPORT, SETTLE_MS } from './constants'
 
-export async function runCapture(url: string, outDir: string, stateName: string): Promise<void> {
+export async function runCapture(url: string, outDir: string, stateName: string): Promise<UIFingerprint> {
   mkdirSync(outDir, { recursive: true })
 
   const browser = await chromium.launch({ headless: true })
@@ -63,4 +64,6 @@ export async function runCapture(url: string, outDir: string, stateName: string)
 
   console.log(`  ${Object.keys(fp.regions).length} regions, ${Object.values(fp.regions).reduce((n, r) => n + r.components.length, 0)} components`)
   console.log(`  Fingerprint: ${join(outDir, filename)}`)
+
+  return fp
 }
