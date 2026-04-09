@@ -1,4 +1,4 @@
-import type { UIFingerprint, DiffReport, DiffFailure } from './types'
+import type { UIFingerprint, FullDiffReport, InvariantFailure, RegressionFailure, InvariantReport, RegressionReport } from './types'
 import { EXACT_COMPARE_PROPS, NUMERIC_TOLERANCES, INVARIANTS } from '../constants'
 
 /**
@@ -9,27 +9,29 @@ import { EXACT_COMPARE_PROPS, NUMERIC_TOLERANCES, INVARIANTS } from '../constant
 export function diffFingerprints(
   baseline: UIFingerprint,
   current: UIFingerprint,
-): DiffReport {
-  const failures: DiffFailure[] = []
+): FullDiffReport {
+  const invariantFailures: InvariantFailure[] = []
+  const regressionFailures: RegressionFailure[] = []
+  let invariantChecks = 0
+  let regressionChecks = 0
+
   const baseRegions = Object.keys(baseline.regions)
   const currRegions = Object.keys(current.regions)
   const missing = baseRegions.filter(k => !currRegions.includes(k))
   const added = currRegions.filter(k => !baseRegions.includes(k))
-  let totalChecked = 0
 
   // Invariant checks on all current components
   for (const [regionKey, region] of Object.entries(current.regions)) {
     for (const comp of region.components) {
       for (const inv of INVARIANTS) {
-        totalChecked++
-        // Support dotted paths like 'bounds.width'
+        invariantChecks++
         const value = resolveProperty(comp.props as unknown as Record<string, unknown>, inv.prop)
         if (inv.check(value, comp.props.role)) {
-          failures.push({
+          invariantFailures.push({
             component: comp.id, region: regionKey,
             property: inv.prop,
-            expected: `not ${String(value)}`,
-            actual: value as string | number | boolean,
+            value: value as string | number | boolean,
+            message: inv.msg,
             screenshotFile: comp.props.screenshotFile,
           })
         }
@@ -47,8 +49,8 @@ export function diffFingerprints(
     for (const baseComp of baseComps) {
       const currComp = currById.get(baseComp.id)
       if (!currComp) {
-        totalChecked++
-        failures.push({
+        regressionChecks++
+        regressionFailures.push({
           component: baseComp.id, region: regionKey,
           property: 'exists', expected: true, actual: false,
         })
@@ -56,11 +58,11 @@ export function diffFingerprints(
       }
 
       for (const prop of EXACT_COMPARE_PROPS) {
-        totalChecked++
+        regressionChecks++
         const bVal = baseComp.props[prop as keyof typeof baseComp.props]
         const cVal = currComp.props[prop as keyof typeof currComp.props]
         if (bVal !== cVal) {
-          failures.push({
+          regressionFailures.push({
             component: currComp.id, region: regionKey,
             property: prop,
             expected: bVal as string | number | boolean,
@@ -71,12 +73,12 @@ export function diffFingerprints(
       }
 
       for (const [prop, tolerance] of Object.entries(NUMERIC_TOLERANCES)) {
-        totalChecked++
+        regressionChecks++
         const bVal = (baseComp.props.bounds as unknown as Record<string, number>)[prop]
         const cVal = (currComp.props.bounds as unknown as Record<string, number>)[prop]
         if (typeof bVal === 'number' && typeof cVal === 'number') {
           if (Math.abs(bVal - cVal) > tolerance) {
-            failures.push({
+            regressionFailures.push({
               component: currComp.id, region: regionKey,
               property: `bounds.${prop}`,
               expected: bVal, actual: cVal,
@@ -89,22 +91,30 @@ export function diffFingerprints(
   }
 
   for (const key of missing) {
-    totalChecked++
-    failures.push({
+    regressionChecks++
+    regressionFailures.push({
       component: key, region: key,
       property: 'region.exists', expected: true, actual: false,
     })
   }
 
+  const invariants: InvariantReport = {
+    failures: invariantFailures,
+    checked: invariantChecks,
+  }
+  const regressions: RegressionReport = {
+    failures: regressionFailures,
+    checked: regressionChecks,
+    missing, added,
+  }
+
   return {
-    pass: failures.length === 0,
+    pass: invariantFailures.length === 0 && regressionFailures.length === 0,
     timestamp: new Date().toISOString(),
-    old: baseline.page.url,
-    new: current.page.url,
-    totalChecked,
-    passed: totalChecked - failures.length,
-    failed: failures.length,
-    missing, added, failures,
+    source: baseline.page.url,
+    target: current.page.url,
+    invariants,
+    regressions,
   }
 }
 
