@@ -1,0 +1,135 @@
+version: 2
+page:
+  url: http://localhost:5176/#/
+  title: SignalCanvas
+  viewport:
+    width: 1440
+    height: 900
+  theme: dark
+  background: rgba(0, 0, 0, 0)
+  layout: header + sidebar + main + footer
+  landmarks:
+    - navigation
+    - banner
+    - contentinfo
+    - main-canvas
+    - canvas-node
+    - canvas-node
+    - canvas-node
+    - canvas-node
+    - toolbar
+  capturedAt: 2026-04-09T18:02:41.061Z
+regions:
+  navigation:
+    role: navigation
+    bounds:
+      x: 0
+      y: 0
+      width: 40
+      height: 900
+    background: rgb(10, 14, 22)
+    childCount: 2
+    components: []
+    _screenshotFile: screenshots/region-navigation.png
+    _estimated_tokens: 44
+  banner:
+    role: banner
+    bounds:
+      x: 40
+      y: 0
+      width: 1400
+      height: 40
+    background: rgb(12, 16, 24)
+    childCount: 3
+    components: []
+    _screenshotFile: screenshots/region-banner.png
+    _estimated_tokens: 42
+  contentinfo:
+    role: contentinfo
+    bounds:
+      x: 40
+      y: 876
+      width: 1400
+      height: 24
+    background: rgb(10, 14, 20)
+    childCount: 2
+    components: []
+    _screenshotFile: screenshots/region-contentinfo.png
+    _estimated_tokens: 45
+  main-canvas-canvas:
+    role: main-canvas
+    bounds:
+      x: 40
+      y: 41
+      width: 1400
+      height: 835
+    background: rgb(8, 12, 20)
+    childCount: 6
+    components: []
+    _screenshotFile: screenshots/region-main-canvas-canvas.png
+    _estimated_tokens: 47
+  canvas-node-dante-switch:
+    role: canvas-node
+    bounds:
+      x: 810
+      y: 107
+      width: 195
+      height: 49
+    background: rgba(0, 0, 0, 0)
+    childCount: 1
+    components: []
+    _screenshotFile: screenshots/region-canvas-node-dante-switch.png
+    _estimated_tokens: 49
+  canvas-node-foh-console:
+    role: canvas-node
+    bounds:
+      x: 1378
+      y: 187
+      width: 232
+      height: 87
+    background: rgba(0, 0, 0, 0)
+    childCount: 1
+    components: []
+    _screenshotFile: screenshots/region-canvas-node-foh-console.png
+    _estimated_tokens: 49
+  canvas-node-stage-left:
+    role: canvas-node
+    bounds:
+      x: 250
+      y: 275
+      width: 223
+      height: 88
+    background: rgba(0, 0, 0, 0)
+    childCount: 1
+    components: []
+    _screenshotFile: screenshots/region-canvas-node-stage-left.png
+    _estimated_tokens: 48
+  canvas-node-stage-right:
+    role: canvas-node
+    bounds:
+      x: 250
+      y: 115
+      width: 223
+      height: 88
+    background: rgba(0, 0, 0, 0)
+    childCount: 1
+    components: []
+    _screenshotFile: screenshots/region-canvas-node-stage-right.png
+    _estimated_tokens: 48
+  toolbar-canvas-controls:
+    role: toolbar
+    bounds:
+      x: 55
+      y: 751
+      width: 28
+      height: 110
+    background: rgb(30, 41, 59)
+    childCount: 4
+    components: []
+    _screenshotFile: screenshots/region-toolbar-canvas-controls.png
+    _estimated_tokens: 47
+ungrouped: []
+state:
+  name: initial-load
+  modals: none
+  selection: null

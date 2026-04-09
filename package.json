@@ -3,9 +3,16 @@
   "version": "2.0.0",
   "description": "DOM property extraction + accessibility tree fingerprints for AI agent UI verification",
   "type": "module",
+  "bin": {
+    "ui-audit": "./bin/ui-audit.sh"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
+    "capture": "tsx src/cli.ts capture",
+    "verify": "tsx src/cli.ts verify",
+    "diff": "tsx src/cli.ts diff",
+    "scenarios": "tsx src/cli.ts scenarios",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -2,8 +2,10 @@
 import { runCapture } from './capture'
 import { runVerify } from './verify'
 import { runDiff } from './diff'
+import { runScenarios, loadScenarioConfig } from './scenarios'
 import { startServer } from './server'
 import type { ChildProcess } from 'child_process'
+import { resolve } from 'path'
 
 const args = process.argv.slice(2)
 const command = args[0]
@@ -18,27 +20,45 @@ function printUsage() {
 ui-audit — Hierarchical YAML fingerprints for AI agent UI verification
 
 Usage:
-  npx tsx src/cli.ts capture [--url <url>] [--out <dir>] [--state <name>]
-  npx tsx src/cli.ts verify  [--url <url>] [--baseline <dir>] [--state <name>]
-  npx tsx src/cli.ts diff    --old <dir> --new <dir> [--state <name>]
+  ui-audit capture   [--url <url>] [--out <dir>] [--state <name>]
+  ui-audit verify    [--url <url>] [--baseline <dir>] [--state <name>]
+  ui-audit diff      --old <dir> --new <dir> [--state <name>]
+  ui-audit scenarios [--url <url>] --config <file> [--out <dir>]
+
+Commands:
+  capture     Capture a single fingerprint from the running app
+  verify      Compare current state against a saved baseline
+  diff        Compare two saved fingerprints (no running app needed)
+  scenarios   Run multiple named scenarios from a config file
 
 Options:
   --url       App URL (auto-starts dev server if omitted)
   --out       Output directory (default: .ui-audit)
-  --baseline  Baseline directory (default: .ui-audit)
-  --state     State name (default: "default", outputs fingerprint-{state}.yaml)
+  --baseline  Baseline directory for verify (default: .ui-audit)
+  --state     State name (default: "default")
+  --config    Path to scenario config (.ts file exporting Scenario[])
   --old       Old fingerprint directory (diff command)
   --new       New fingerprint directory (diff command)
+
+Scenario config example (ui-audit.scenarios.ts):
+
+  import type { Page } from 'playwright'
+  export default [
+    { name: 'initial-load' },
+    { name: 'modal-open', setup: async (page: Page) => {
+        await page.click('.open-modal-btn')
+        await page.waitForTimeout(500)
+    }},
+  ]
 `)
 }
 
 async function main() {
-  if (!command || command === '--help' || !['capture', 'verify', 'diff'].includes(command)) {
+  if (!command || command === '--help' || !['capture', 'verify', 'diff', 'scenarios'].includes(command)) {
     printUsage()
     process.exit(0)
   }
 
-  const stateName = getFlag('state') ?? 'default'
   let serverProc: ChildProcess | null = null
 
   try {
@@ -50,6 +70,7 @@ async function main() {
         serverProc = server.process
       }
       const outDir = getFlag('out') ?? '.ui-audit'
+      const stateName = getFlag('state') ?? 'default'
       console.log(`Capturing from ${url}...`)
       await runCapture(url, outDir, stateName)
       console.log('Done.')
@@ -63,6 +84,7 @@ async function main() {
         serverProc = server.process
       }
       const baselineDir = getFlag('baseline') ?? '.ui-audit'
+      const stateName = getFlag('state') ?? 'default'
       console.log(`Verifying ${url} against baseline...`)
       const pass = await runVerify(url, baselineDir, stateName)
       if (serverProc) serverProc.kill()
@@ -76,7 +98,27 @@ async function main() {
         console.error('diff requires --old and --new directories')
         process.exit(1)
       }
+      const stateName = getFlag('state') ?? 'default'
       await runDiff(oldDir, newDir, stateName)
+    }
+
+    if (command === 'scenarios') {
+      const configPath = getFlag('config')
+      if (!configPath) {
+        console.error('scenarios requires --config <path-to-scenarios.ts>')
+        process.exit(1)
+      }
+
+      let url = getFlag('url')
+      if (!url) {
+        const server = await startServer()
+        url = server.url
+        serverProc = server.process
+      }
+
+      const outDir = getFlag('out') ?? '.ui-audit-scenarios'
+      const scenarios = await loadScenarioConfig(resolve(configPath))
+      await runScenarios(url, scenarios, outDir)
     }
   } finally {
     if (serverProc) serverProc.kill()
