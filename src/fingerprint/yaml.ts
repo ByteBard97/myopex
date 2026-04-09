@@ -1,5 +1,6 @@
 import { stringify, parse } from 'yaml'
 import type { UIFingerprint } from './types'
+import { validateFingerprint } from './schema'
 
 const YAML_OPTS = {
   indent: 2,
@@ -20,5 +21,11 @@ export function serializeFingerprint(fp: UIFingerprint): string {
 }
 
 export function deserializeFingerprint(yamlStr: string): UIFingerprint {
-  return parse(yamlStr) as UIFingerprint
+  let raw: unknown
+  try {
+    raw = parse(yamlStr)
+  } catch (err) {
+    throw new Error(`Invalid YAML: ${err instanceof Error ? err.message : String(err)}`)
+  }
+  return validateFingerprint(raw)
 }

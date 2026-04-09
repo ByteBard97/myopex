@@ -65,6 +65,27 @@ describe('YAML deserialization', () => {
   })
 })
 
+describe('YAML validation', () => {
+  it('rejects YAML with missing version field', () => {
+    const bad = 'page:\n  url: /\n'
+    expect(() => deserializeFingerprint(bad)).toThrow(/version/)
+  })
+
+  it('rejects YAML with wrong version', () => {
+    const bad = 'version: 99\npage:\n  url: /\n'
+    expect(() => deserializeFingerprint(bad)).toThrow(/version/)
+  })
+
+  it('rejects completely invalid YAML', () => {
+    expect(() => deserializeFingerprint('not: valid: yaml: [')).toThrow()
+  })
+
+  it('rejects YAML with missing page block', () => {
+    const bad = 'version: 2\nregions: {}\n'
+    expect(() => deserializeFingerprint(bad)).toThrow(/page/)
+  })
+})
+
 describe('YAML roundtrip', () => {
   it('serialize → deserialize preserves all data', () => {
     const original: UIFingerprint = {
