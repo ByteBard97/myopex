@@ -19,9 +19,13 @@ export interface AXNode {
 export async function extractAccessibilityTree(page: Page): Promise<AXNode> {
   const client = await page.context().newCDPSession(page)
 
-  const { nodes } = await client.send('Accessibility.getFullAXTree')
-
-  await client.detach()
+  let nodes: any[]
+  try {
+    const result = await client.send('Accessibility.getFullAXTree')
+    nodes = result.nodes
+  } finally {
+    await client.detach()
+  }
 
   // Build a tree from the flat CDP node list
   const nodeMap = new Map<string, AXNode & { parentId?: string }>()
