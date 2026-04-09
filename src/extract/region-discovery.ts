@@ -112,7 +112,7 @@ export async function discoverRegions(
             regions.push({
               role: 'canvas-node',
               name: nodeId,
-              selector: `.vue-flow__node[data-id="${nodeId}"] .device-node, .vue-flow__node[data-id="${nodeId}"] .cdn-node`,
+              selector: `.vue-flow__node[data-id="${nodeId}"]`,
               source: 'config-selector',
             })
           }
