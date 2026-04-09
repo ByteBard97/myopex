@@ -6,7 +6,7 @@
 
 **Architecture:** The existing `extract/` → `fingerprint/` separation is correct and stays. We're fixing internals: CDP batching for performance, single extraction source for correctness, separated diff reports for clarity, and schema validation for safety. No new directories, no class hierarchies, no new dependencies beyond `zod` for schema validation.
 
-**Tech Stack:** Same as v2 — TypeScript, Playwright, CDP, `yaml`. Adding `zod` for schema validation only.
+**Tech Stack:** Same as v2 — TypeScript, Playwright, CDP, `yaml`. No new dependencies.
 
 **Prerequisite:** v2 is implemented and 38/39 tests pass (CLI integration test needs timeout fix — that's Task 1 below).
 
@@ -32,7 +32,7 @@
 | `src/fingerprint/diff-engine.ts` | Separate InvariantReport and RegressionReport |
 | `src/fingerprint/types.ts` | Add `resolveStatus` to ElementProps, add report types |
 | `src/fingerprint/yaml.ts` | Add zod schema validation on deserialize |
-| `src/fingerprint/schema.ts` | NEW — zod schema for UIFingerprint |
+| `src/fingerprint/schema.ts` | NEW — manual validator for UIFingerprint (no deps) |
 | `src/capture.ts` | Return UIFingerprint object (not just write to disk) |
 | `src/verify.ts` | Use returned fingerprint directly, skip disk round-trip |
 | `src/constants.ts` | Move `.device-node`/`.cdn-node` to config, keep `.vue-flow` |
@@ -818,13 +818,9 @@ git commit -m "fix: populate ungrouped, mark unresolved nodes, skip failed in in
 - Modify: `src/fingerprint/yaml.ts`
 - Test: `tests/fingerprint/yaml.test.ts`
 
-- [ ] **Step 1: Install zod**
+No new dependencies. Manual validator (~40 lines) instead of Zod.
 
-```bash
-npm install zod
-```
-
-- [ ] **Step 2: Write tests**
+- [ ] **Step 1: Write tests**
 
 Read `tests/fingerprint/yaml.test.ts`. Add:
 
@@ -842,77 +838,80 @@ it('rejects YAML with wrong version', () => {
 it('rejects completely invalid YAML', () => {
   expect(() => deserializeFingerprint('not: valid: yaml: [')).toThrow()
 })
+
+it('rejects YAML with missing page block', () => {
+  const bad = 'version: 2\nregions: {}\n'
+  expect(() => deserializeFingerprint(bad)).toThrow(/page/)
+})
 ```
 
-- [ ] **Step 3: Create schema.ts**
+- [ ] **Step 2: Run tests to verify they fail**
+
+```bash
+npx vitest run tests/fingerprint/yaml.test.ts
+```
+
+Expected: FAIL — no validation yet
+
+- [ ] **Step 3: Create manual schema validator**
 
 ```typescript
 // src/fingerprint/schema.ts
-import { z } from 'zod'
+import type { UIFingerprint } from './types'
 
-const BoundsSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  width: z.number(),
-  height: z.number(),
-})
+/**
+ * Validate a parsed object is a valid UIFingerprint.
+ * Throws with a descriptive error if invalid.
+ * No external dependencies — just type checks.
+ */
+export function validateFingerprint(raw: unknown): UIFingerprint {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid fingerprint: expected an object')
+  }
 
-const ElementPropsSchema = z.object({
-  role: z.string(),
-  name: z.string(),
-  bounds: BoundsSchema,
-  visible: z.boolean(),
-  backgroundColor: z.string(),
-  color: z.string(),
-  fontSize: z.string(),
-  borderWidth: z.string(),
-  opacity: z.string(),
-  display: z.string(),
-  overflow: z.string(),
-  textOverflow: z.boolean(),
-  textContent: z.string(),
-  childCount: z.number(),
-  resolveStatus: z.enum(['ok', 'failed', 'fallback']).optional(),
-  screenshotFile: z.string().nullable().optional(),
-})
+  const obj = raw as Record<string, unknown>
 
-const ComponentSchema = z.object({
-  id: z.string(),
-  props: ElementPropsSchema,
-  children: z.lazy(() => z.array(ComponentSchema)).optional(),
-})
+  // Version check
+  if (obj.version !== 2) {
+    throw new Error(
+      `Invalid fingerprint: version must be 2, got ${JSON.stringify(obj.version)}`
+    )
+  }
 
-const RegionSchema = z.object({
-  role: z.string(),
-  bounds: BoundsSchema,
-  background: z.string(),
-  childCount: z.number(),
-  summary: z.string().optional(),
-  components: z.array(ComponentSchema),
-})
+  // Page block
+  if (!obj.page || typeof obj.page !== 'object') {
+    throw new Error('Invalid fingerprint: missing or invalid "page" block')
+  }
+  const page = obj.page as Record<string, unknown>
+  for (const field of ['url', 'title', 'background', 'layout', 'capturedAt']) {
+    if (typeof page[field] !== 'string') {
+      throw new Error(`Invalid fingerprint: page.${field} must be a string`)
+    }
+  }
+  if (!page.viewport || typeof page.viewport !== 'object') {
+    throw new Error('Invalid fingerprint: page.viewport must be an object')
+  }
+  if (!Array.isArray(page.landmarks)) {
+    throw new Error('Invalid fingerprint: page.landmarks must be an array')
+  }
 
-const PageMetaSchema = z.object({
-  url: z.string(),
-  title: z.string(),
-  viewport: z.object({ width: z.number(), height: z.number() }),
-  theme: z.string(),
-  background: z.string(),
-  layout: z.string(),
-  landmarks: z.array(z.string()),
-  capturedAt: z.string(),
-})
+  // Regions block
+  if (!obj.regions || typeof obj.regions !== 'object') {
+    throw new Error('Invalid fingerprint: missing or invalid "regions" block')
+  }
 
-export const UIFingerprintSchema = z.object({
-  version: z.literal(2),
-  page: PageMetaSchema,
-  regions: z.record(z.string(), RegionSchema),
-  ungrouped: z.array(ComponentSchema),
-  state: z.object({
-    name: z.string(),
-    modals: z.string(),
-    selection: z.string().nullable(),
-  }),
-})
+  // State block
+  if (!obj.state || typeof obj.state !== 'object') {
+    throw new Error('Invalid fingerprint: missing or invalid "state" block')
+  }
+
+  // Ungrouped
+  if (!Array.isArray(obj.ungrouped)) {
+    throw new Error('Invalid fingerprint: "ungrouped" must be an array')
+  }
+
+  return obj as unknown as UIFingerprint
+}
 ```
 
 - [ ] **Step 4: Update yaml.ts to validate on deserialize**
@@ -922,20 +921,20 @@ Read `src/fingerprint/yaml.ts`. Update:
 ```typescript
 import { parse, stringify } from 'yaml'
 import type { UIFingerprint } from './types'
-import { UIFingerprintSchema } from './schema'
+import { validateFingerprint } from './schema'
 
 export function serializeFingerprint(fp: UIFingerprint): string {
   return stringify(fp, { indent: 2, lineWidth: 120 })
 }
 
 export function deserializeFingerprint(yamlStr: string): UIFingerprint {
-  const raw = parse(yamlStr)
-  const result = UIFingerprintSchema.safeParse(raw)
-  if (!result.success) {
-    const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
-    throw new Error(`Invalid fingerprint YAML: ${issues}`)
+  let raw: unknown
+  try {
+    raw = parse(yamlStr)
+  } catch (err) {
+    throw new Error(`Invalid YAML: ${err instanceof Error ? err.message : String(err)}`)
   }
-  return result.data
+  return validateFingerprint(raw)
 }
 ```
 
@@ -950,8 +949,8 @@ Expected: ALL pass
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/fingerprint/schema.ts src/fingerprint/yaml.ts tests/fingerprint/yaml.test.ts package.json package-lock.json
-git commit -m "feat: zod schema validation on YAML deserialize"
+git add src/fingerprint/schema.ts src/fingerprint/yaml.ts tests/fingerprint/yaml.test.ts
+git commit -m "feat: manual schema validation on YAML deserialize (no deps)"
 ```
 
 ---
