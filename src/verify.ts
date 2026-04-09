@@ -19,10 +19,7 @@ export async function runVerify(url: string, baselineDir: string, stateName: str
 
   // Capture current state into a temp subdirectory
   const currentDir = join(baselineDir, 'current')
-  await runCapture(url, currentDir, stateName)
-
-  const currentYaml = readFileSync(join(currentDir, filename), 'utf-8')
-  const current = deserializeFingerprint(currentYaml)
+  const current = await runCapture(url, currentDir, stateName)
 
   const report = diffFingerprints(baseline, current)
   writeFileSync(join(baselineDir, 'report.json'), JSON.stringify(report, null, 2))
