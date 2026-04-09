@@ -1,22 +1,9 @@
 import type { Page } from 'playwright'
-import type { Bounds } from '../fingerprint/types'
+import { EXTRACT_FN_SOURCE, type VisualPropsResult } from './visual-props'
 
 const BATCH_SIZE = 30
 
-export interface ResolvedNode {
-  bounds: Bounds
-  visible: boolean
-  backgroundColor: string
-  color: string
-  fontSize: string
-  borderWidth: string
-  opacity: string
-  display: string
-  overflow: string
-  textOverflow: boolean
-  textContent: string
-  childCount: number
-}
+export type ResolvedNode = VisualPropsResult
 
 /**
  * Batch-resolve a list of backendDOMNodeIds to their computed visual properties
@@ -34,32 +21,6 @@ export async function batchResolveVisualProps(
 ): Promise<Map<number, ResolvedNode>> {
   const client = await page.context().newCDPSession(page)
   const results = new Map<number, ResolvedNode>()
-
-  // The function we'll call on each resolved DOM element
-  const extractFnSource = `function() {
-    const el = this;
-    const rect = el.getBoundingClientRect();
-    const cs = window.getComputedStyle(el);
-    return JSON.stringify({
-      bounds: {
-        x: Math.round(rect.x),
-        y: Math.round(rect.y),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-      },
-      visible: rect.width > 0 && rect.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none',
-      backgroundColor: cs.backgroundColor,
-      color: cs.color,
-      fontSize: cs.fontSize,
-      borderWidth: cs.borderWidth,
-      opacity: cs.opacity,
-      display: cs.display,
-      overflow: cs.overflow,
-      textOverflow: el.scrollWidth > el.clientWidth,
-      textContent: (el.textContent || '').trim().substring(0, 200),
-      childCount: el.children.length,
-    });
-  }`
 
   try {
     // Process in batches to stay within CDP in-flight message limits
@@ -83,7 +44,7 @@ export async function batchResolveVisualProps(
 
           const { result } = await client.send('Runtime.callFunctionOn', {
             objectId,
-            functionDeclaration: extractFnSource,
+            functionDeclaration: EXTRACT_FN_SOURCE,
             returnByValue: true,
           })
           return { nodeId, objectId, value: result.value }

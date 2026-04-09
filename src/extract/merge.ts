@@ -3,6 +3,7 @@ import type { UIFingerprint, Region, Component, ElementProps } from '../fingerpr
 import { extractAccessibilityTree, type AXNode } from './accessibility'
 import { discoverRegions, type DiscoveryConfig, type DiscoveryResult } from './region-discovery'
 import { batchResolveVisualProps, type ResolvedNode } from './cdp-resolve'
+import type { VisualPropsResult } from './visual-props'
 
 export interface BuildOptions {
   stateName?: string
@@ -218,11 +219,11 @@ function buildComponentId(
 async function extractViaSelector(
   page: Page,
   selector: string,
-): Promise<ResolvedNode | undefined> {
+): Promise<VisualPropsResult | undefined> {
   const count = await page.locator(selector).count()
   if (count === 0) return undefined
 
-  return page.locator(selector).first().evaluate((el) => {
+  return page.locator(selector).first().evaluate(/** Logic MUST match EXTRACT_FN_SOURCE in visual-props.ts */ (el) => {
     const rect = el.getBoundingClientRect()
     const cs = window.getComputedStyle(el)
     const h = el as HTMLElement
