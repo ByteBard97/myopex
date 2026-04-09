@@ -22,7 +22,8 @@ export function diffFingerprints(
     for (const comp of region.components) {
       for (const inv of INVARIANTS) {
         totalChecked++
-        const value = comp.props[inv.prop as keyof typeof comp.props]
+        // Support dotted paths like 'bounds.width'
+        const value = resolveProperty(comp.props as unknown as Record<string, unknown>, inv.prop)
         if (inv.check(value, comp.props.role)) {
           failures.push({
             component: comp.id, region: regionKey,
@@ -105,4 +106,15 @@ export function diffFingerprints(
     failed: failures.length,
     missing, added, failures,
   }
+}
+
+/** Resolve a dotted property path (e.g., 'bounds.width') on an object */
+function resolveProperty(obj: Record<string, unknown>, path: string): unknown {
+  const parts = path.split('.')
+  let current: unknown = obj
+  for (const part of parts) {
+    if (current == null || typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current
 }

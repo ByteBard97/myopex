@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium, type Browser, type Page } from 'playwright'
-import { discoverRegions, type DiscoveredRegion } from '../../src/extract/region-discovery'
+import { discoverRegions } from '../../src/extract/region-discovery'
 import { join } from 'path'
 
 describe('region discovery', () => {
@@ -21,7 +21,7 @@ describe('region discovery', () => {
     await page.goto(`file://${join(__dirname, '../../fixtures/sample-page.html')}`)
     await page.waitForTimeout(300)
 
-    const regions = await discoverRegions(page)
+    const { regions } = await discoverRegions(page)
     const roles = regions.map(r => r.role)
     expect(roles).toContain('banner')
     expect(roles).toContain('navigation')
@@ -41,7 +41,7 @@ describe('region discovery', () => {
     `)
     await page.waitForTimeout(300)
 
-    const regions = await discoverRegions(page)
+    const { regions } = await discoverRegions(page)
     expect(regions.length).toBeGreaterThanOrEqual(4)
     // Should still discover these via semantic HTML fallback
     const roles = regions.map(r => r.role)
@@ -51,14 +51,18 @@ describe('region discovery', () => {
     expect(roles).toContain('contentinfo')
   })
 
-  it('includes data-testid elements as components, not regions', async () => {
+  it('collects data-testid elements separately from regions', async () => {
     await page.goto(`file://${join(__dirname, '../../fixtures/sample-page.html')}`)
     await page.waitForTimeout(300)
 
-    const regions = await discoverRegions(page)
-    // data-testid elements should appear as components within regions, not as top-level regions
+    const { regions, testIdElements } = await discoverRegions(page)
+    // data-testid elements should NOT appear as top-level regions
     const regionRoles = regions.map(r => r.role)
     expect(regionRoles).not.toContain('data-testid')
+    // But they should be collected in testIdElements
+    expect(testIdElements.length).toBeGreaterThanOrEqual(2)
+    expect(testIdElements.some(t => t.testId === 'device-1')).toBe(true)
+    expect(testIdElements.some(t => t.testId === 'device-2')).toBe(true)
   })
 
   it('uses config selectors when provided', async () => {
@@ -69,7 +73,7 @@ describe('region discovery', () => {
     `)
     await page.waitForTimeout(300)
 
-    const regions = await discoverRegions(page, {
+    const { regions } = await discoverRegions(page, {
       extraSelectors: [{ selector: '.my-custom-region', role: 'custom', name: 'Custom Region' }],
     })
     expect(regions.some(r => r.name === 'Custom Region')).toBe(true)

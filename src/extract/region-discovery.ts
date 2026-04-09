@@ -1,5 +1,5 @@
 import type { Page } from 'playwright'
-import { extractAccessibilityTree, extractLandmarks } from './accessibility'
+import { extractAccessibilityTree, extractLandmarks, type AXNode } from './accessibility'
 
 export interface DiscoveredRegion {
   role: string
@@ -14,25 +14,34 @@ export interface DiscoveryConfig {
   extraSelectors?: Array<{ selector: string; role: string; name: string }>
 }
 
+export interface DiscoveryResult {
+  regions: DiscoveredRegion[]
+  axTree: AXNode | null
+  testIdElements: Array<{ selector: string; testId: string }>
+}
+
 /**
- * Discover UI regions via a 3-level fallback chain:
+ * Discover UI regions via a 4-level fallback chain:
  *   1. ARIA landmarks (CDP accessibility tree)
  *   2. Semantic HTML sectioning elements (header, nav, main, aside, footer)
- *   3. Config file selectors (optional, additive)
+ *   3. [data-testid] elements — collected as components within regions, not as regions
+ *   4. Config file selectors (optional, additive)
  *
- * data-testid elements are collected separately as components, not regions.
+ * Returns the discovered regions, the AX tree (for reuse by merge), and
+ * any data-testid elements found (for component injection).
  */
 export async function discoverRegions(
   page: Page,
   config?: DiscoveryConfig,
-): Promise<DiscoveredRegion[]> {
+): Promise<DiscoveryResult> {
   const regions: DiscoveredRegion[] = []
   const foundRoles = new Set<string>()
+  let axTree: AXNode | null = null
 
   // --- Level 1: ARIA landmarks from accessibility tree ---
   try {
-    const tree = await extractAccessibilityTree(page)
-    const landmarks = extractLandmarks(tree)
+    axTree = await extractAccessibilityTree(page)
+    const landmarks = extractLandmarks(axTree)
 
     for (const landmark of landmarks) {
       const key = landmark.role + (landmark.name ? `|${landmark.name}` : '')
@@ -76,7 +85,17 @@ export async function discoverRegions(
     }
   }
 
-  // --- Level 3: Config file selectors (additive) ---
+  // --- Level 3: Collect [data-testid] elements as components (not regions) ---
+  const testIdElements: Array<{ selector: string; testId: string }> = []
+  const testIdCount = await page.locator('[data-testid]').count()
+  for (let i = 0; i < testIdCount; i++) {
+    const testId = await page.locator('[data-testid]').nth(i).getAttribute('data-testid')
+    if (testId) {
+      testIdElements.push({ selector: `[data-testid="${testId}"]`, testId })
+    }
+  }
+
+  // --- Level 4: Config file selectors (additive) ---
   if (config?.extraSelectors) {
     for (const extra of config.extraSelectors) {
       const count = await page.locator(extra.selector).count()
@@ -91,7 +110,19 @@ export async function discoverRegions(
     }
   }
 
-  return regions
+  return { regions, axTree, testIdElements }
+}
+
+/**
+ * Backward-compatible wrapper that returns just the regions array.
+ * Used by tests that only care about region discovery.
+ */
+export async function discoverRegionsCompat(
+  page: Page,
+  config?: DiscoveryConfig,
+): Promise<DiscoveredRegion[]> {
+  const result = await discoverRegions(page, config)
+  return result.regions
 }
 
 function buildSelectorForLandmark(role: string, name: string): string {
