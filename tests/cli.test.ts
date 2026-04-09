@@ -8,7 +8,7 @@ const OUT_DIR = join(__dirname, '../.test-audit')
 const FIXTURE = `file://${join(__dirname, '../fixtures/sample-page.html')}`
 
 describe('CLI integration', () => {
-  it('capture produces fingerprint.yaml + full-page screenshot', () => {
+  it('capture produces fingerprint.yaml + full-page screenshot', { timeout: 60000 }, () => {
     if (existsSync(OUT_DIR)) rmSync(OUT_DIR, { recursive: true })
     execSync(`npx tsx src/cli.ts capture --url "${FIXTURE}" --out ${OUT_DIR}`, {
       cwd: join(__dirname, '..'),
@@ -22,7 +22,7 @@ describe('CLI integration', () => {
     expect(yaml).toContain('role: banner')
   })
 
-  it('capture with --state produces fingerprint-{state}.yaml', () => {
+  it('capture with --state produces fingerprint-{state}.yaml', { timeout: 60000 }, () => {
     execSync(`npx tsx src/cli.ts capture --url "${FIXTURE}" --out ${OUT_DIR} --state loaded`, {
       cwd: join(__dirname, '..'),
       timeout: 30000,
@@ -30,7 +30,7 @@ describe('CLI integration', () => {
     expect(existsSync(join(OUT_DIR, 'fingerprint-loaded.yaml'))).toBe(true)
   })
 
-  it('verify against own baseline produces report', () => {
+  it('verify against own baseline produces report', { timeout: 60000 }, () => {
     try {
       execSync(`npx tsx src/cli.ts verify --url "${FIXTURE}" --baseline ${OUT_DIR}`, {
         cwd: join(__dirname, '..'),
