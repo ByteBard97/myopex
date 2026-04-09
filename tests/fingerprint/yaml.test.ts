@@ -30,6 +30,7 @@ const SAMPLE_FP: UIFingerprint = {
           color: '#2DD4BF', fontSize: '16px', borderWidth: '0px',
           opacity: '1', display: 'inline', overflow: 'visible',
           textOverflow: false, textContent: 'TESTAPP', childCount: 0,
+          resolveStatus: 'ok',
         },
       }],
     },

@@ -23,6 +23,8 @@ export function diffFingerprints(
   // Invariant checks on all current components
   for (const [regionKey, region] of Object.entries(current.regions)) {
     for (const comp of region.components) {
+      // Skip failed resolutions — they're extraction failures, not UI bugs
+      if (comp.props.resolveStatus === 'failed') continue
       for (const inv of INVARIANTS) {
         invariantChecks++
         const value = resolveProperty(comp.props as unknown as Record<string, unknown>, inv.prop)

@@ -20,6 +20,7 @@ export interface ElementProps {
   textOverflow: boolean
   textContent: string
   childCount: number
+  resolveStatus: 'ok' | 'failed' | 'fallback'
   screenshotFile?: string | null
 }
 
