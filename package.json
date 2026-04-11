@@ -1,11 +1,38 @@
 {
   "name": "ui-audit",
   "version": "2.0.0",
-  "description": "DOM property extraction + accessibility tree fingerprints for AI agent UI verification",
+  "description": "Structured UI snapshots for coding agents — capture every UI state as a diffable YAML fingerprint + screenshots in one browser boot",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "src",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "ui-audit": "./bin/ui-audit.sh"
   },
+  "keywords": [
+    "ui-testing",
+    "ai-agent",
+    "llm",
+    "claude-code",
+    "playwright",
+    "accessibility",
+    "visual-regression",
+    "coding-agent",
+    "snapshot-testing"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
