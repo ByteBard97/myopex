@@ -55,7 +55,16 @@ export async function runCapture(
 
   const page = await context.newPage()
   await page.goto(url)
-  await page.waitForTimeout(SETTLE_MS)
+  // Smart settle: prefer networkidle, fall back to the hard ceiling.
+  // Most apps settle well under SETTLE_MS; we only block the full budget
+  // on apps with streaming / long-polling that never go idle.
+  try {
+    await page.waitForLoadState('networkidle', { timeout: SETTLE_MS })
+  } catch {
+    // networkidle never fired — the waitForLoadState call itself already
+    // consumed our settle budget, so we're ready to capture.
+  }
+  await page.waitForTimeout(200)
 
   const fp = await captureFromPage(page, outDir, stateName)
 
@@ -80,7 +89,7 @@ async function writeScreenshots(page: Page, fp: UIFingerprint, outDir: string): 
           type: 'png',
           clip: { x: rb.x, y: rb.y, width: Math.min(rb.width, 1440), height: Math.min(rb.height, 900) },
         })
-        ;(region as Record<string, unknown>)._screenshotFile = `screenshots/${filename}`
+        ;(region as unknown as Record<string, unknown>)._screenshotFile = `screenshots/${filename}`
       } catch {
         // Region may be partially offscreen
       }

@@ -17,19 +17,19 @@ function getFlag(name: string): string | undefined {
 
 function printUsage() {
   console.log(`
-ui-audit — Hierarchical YAML fingerprints for AI agent UI verification
+ui-audit — Structured UI snapshots for coding agents
 
 Usage:
+  ui-audit scenarios [--url <url>] --config <file> [--out <dir>]
   ui-audit capture   [--url <url>] [--out <dir>] [--state <name>]
   ui-audit verify    [--url <url>] [--baseline <dir>] [--state <name>]
   ui-audit diff      --old <dir> --new <dir> [--state <name>]
-  ui-audit scenarios [--url <url>] --config <file> [--out <dir>]
 
 Commands:
+  scenarios   Capture every UI state from a config in one browser boot (recommended)
   capture     Capture a single fingerprint from the running app
-  verify      Compare current state against a saved baseline
+  verify      Compare current state against a saved baseline (exits 1 on regression)
   diff        Compare two saved fingerprints (no running app needed)
-  scenarios   Run multiple named scenarios from a config file
 
 Options:
   --url       App URL (auto-starts dev server if omitted)
@@ -42,14 +42,20 @@ Options:
 
 Scenario config example (ui-audit.scenarios.ts):
 
-  import type { Page } from 'playwright'
   export default [
-    { name: 'initial-load' },
-    { name: 'modal-open', setup: async (page: Page) => {
-        await page.click('.open-modal-btn')
-        await page.waitForTimeout(500)
-    }},
+    { name: 'home' },
+    { name: 'settings', url: 'http://localhost:5173/?modal=settings' },
+    { name: 'drawer-open', steps: [
+        { click: '[data-testid=menu-button]' },
+        { waitFor: '.drawer.open' },
+    ]},
+    { name: 'empty', steps: [
+        { evaluate: 'localStorage.clear()' },
+        { goto: 'http://localhost:5173' },
+    ]},
   ]
+
+See examples/ui-audit.scenarios.ts for a full reference with all step types.
 `)
 }
 
