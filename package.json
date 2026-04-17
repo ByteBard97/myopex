@@ -1,6 +1,6 @@
 {
   "name": "myopex",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Structured UI snapshots for coding agents — capture every UI state as a diffable YAML fingerprint + screenshots in one browser boot",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,6 +16,7 @@
     "bin",
     "src",
     "examples",
+    "claude-plugin",
     "README.md",
     "LICENSE"
   ],
