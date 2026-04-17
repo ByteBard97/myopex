@@ -140,10 +140,19 @@ export async function runScenarios(
 
   console.log(`Running ${scenarios.length} scenario(s) against ${baseUrl}...\n`)
 
+  type Outcome = { name: string; status: 'ok' | 'zero-components' | 'failed' }
+  const outcomes: Outcome[] = []
+
   for (const scenario of scenarios) {
     const scenarioDir = join(outDir, scenario.name)
     const page = await context.newPage()
     const settleMs = scenario.settleMs ?? SETTLE_MS
+
+    // Action timeout: short enough to catch typos in testid/selectors quickly
+    // without waiting out Playwright's 30s default. settleMs handles genuine
+    // slow-render cases separately; per-scenario waits can still use
+    // { wait: N } for explicit long pauses.
+    page.setDefaultTimeout(5000)
 
     try {
       // Fresh navigation for each scenario
@@ -169,9 +178,12 @@ export async function runScenarios(
       }
 
       // Capture fingerprint + screenshots
-      await captureFromPage(page, scenarioDir, scenario.name)
+      const fp = await captureFromPage(page, scenarioDir, scenario.name)
+      const compCount = Object.values(fp.regions).reduce((n, r) => n + r.components.length, 0)
+      outcomes.push({ name: scenario.name, status: compCount === 0 ? 'zero-components' : 'ok' })
     } catch (err) {
       console.error(`  [${scenario.name}] FAILED: ${err instanceof Error ? err.message : String(err)}`)
+      outcomes.push({ name: scenario.name, status: 'failed' })
     } finally {
       await page.close()
     }
@@ -179,6 +191,25 @@ export async function runScenarios(
 
   await browser.close()
   console.log(`\nDone. Output: ${outDir}/`)
+
+  // Aggregate warnings. Keeps silent-failure modes from being mistaken for
+  // success — the overall command exits 0 either way, but the caller sees a
+  // loud block on stderr that summarizes what to investigate.
+  const failed = outcomes.filter(o => o.status === 'failed')
+  const zero = outcomes.filter(o => o.status === 'zero-components')
+  if (failed.length === 0 && zero.length === 0) return
+
+  console.warn(`\nCapture warnings:`)
+  if (failed.length > 0) {
+    console.warn(`  ${failed.length} scenario(s) failed: ${failed.map(f => f.name).join(', ')}`)
+    console.warn(`  Review the FAILED lines above for the specific error per scenario.`)
+  }
+  if (zero.length > 0) {
+    console.warn(`  ${zero.length} scenario(s) captured 0 components: ${zero.map(z => z.name).join(', ')}`)
+    console.warn(`  Likely cause: interactive elements lack data-testid or aria-label,`)
+    console.warn(`  so the accessibility tree has no named children for component extraction.`)
+    console.warn(`  Fix: add data-testid to key buttons/links/inputs, then re-run scenarios.`)
+  }
 }
 
 /**

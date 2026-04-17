@@ -76,6 +76,16 @@ const LANDMARK_ROLES = new Set([
 ])
 
 /**
+ * Dialog-like roles we surface as top-level regions. These are not ARIA
+ * landmarks (landmarks are page-structure), but a visible modal is exactly
+ * the sort of thing a fingerprint needs to capture — frameworks commonly
+ * teleport them out of the document tree (Vue <Teleport>, React portals) so
+ * they'd otherwise fall outside every landmark region and vanish from the
+ * fingerprint entirely.
+ */
+const DIALOG_ROLES = new Set(['dialog', 'alertdialog'])
+
+/**
  * Extract ARIA landmark regions from the tree.
  * Returns a flat list of nodes with landmark roles.
  */
@@ -87,4 +97,19 @@ export function extractLandmarks(tree: AXNode): AXNode[] {
   }
   walk(tree)
   return landmarks
+}
+
+/**
+ * Extract visible dialogs / alertdialogs from the tree. Hidden dialogs
+ * (aria-hidden, display:none) are already filtered out by CDP before the
+ * tree reaches us, so every dialog returned here is visible at capture time.
+ */
+export function extractDialogs(tree: AXNode): AXNode[] {
+  const dialogs: AXNode[] = []
+  function walk(node: AXNode) {
+    if (DIALOG_ROLES.has(node.role)) dialogs.push(node)
+    for (const child of node.children ?? []) walk(child)
+  }
+  walk(tree)
+  return dialogs
 }

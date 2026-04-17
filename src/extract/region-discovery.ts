@@ -1,5 +1,5 @@
 import type { Page } from 'playwright'
-import { extractAccessibilityTree, extractLandmarks, type AXNode } from './accessibility'
+import { extractAccessibilityTree, extractLandmarks, extractDialogs, type AXNode } from './accessibility'
 import { FRAMEWORK_SELECTORS } from '../constants'
 
 export interface DiscoveredRegion {
@@ -8,7 +8,7 @@ export interface DiscoveredRegion {
   backendDOMNodeId?: number
   /** CSS selector for this region (used for screenshot capture and fallback property extraction) */
   selector: string
-  source: 'aria-landmark' | 'semantic-html' | 'config-selector'
+  source: 'aria-landmark' | 'aria-dialog' | 'semantic-html' | 'config-selector'
 }
 
 export interface DiscoveryConfig {
@@ -62,6 +62,26 @@ export async function discoverRegions(
         backendDOMNodeId: landmark.backendDOMNodeId,
         selector: buildSelectorForLandmark(landmark.role, landmark.name),
         source: 'aria-landmark',
+      })
+    }
+
+    // Level 1.5: Dialogs. Treated as top-level regions because they're often
+    // teleported outside any landmark (Vue <Teleport to="body">, React
+    // portals) and would otherwise vanish from the fingerprint.
+    const dialogs = extractDialogs(axTree)
+    for (const d of dialogs) {
+      const key = d.role + (d.name ? `|${d.name}` : '')
+      if (foundKeys.has(key)) continue
+      foundKeys.add(key)
+
+      regions.push({
+        role: d.role,
+        name: d.name || d.role,
+        backendDOMNodeId: d.backendDOMNodeId,
+        selector: d.name
+          ? `[role="${d.role}"][aria-label="${d.name}"]`
+          : `[role="${d.role}"]`,
+        source: 'aria-dialog',
       })
     }
   } catch {
