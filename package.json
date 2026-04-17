@@ -1,7 +1,17 @@
 {
   "name": "myopex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Structured UI snapshots for coding agents — capture every UI state as a diffable YAML fingerprint + screenshots in one browser boot",
+  "license": "MIT",
+  "author": "ByteBard97",
+  "homepage": "https://github.com/ByteBard97/myopex#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ByteBard97/myopex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ByteBard97/myopex/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
