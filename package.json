@@ -1,5 +1,5 @@
 {
-  "name": "ui-audit",
+  "name": "myopex",
   "version": "2.0.0",
   "description": "Structured UI snapshots for coding agents — capture every UI state as a diffable YAML fingerprint + screenshots in one browser boot",
   "type": "module",
@@ -20,7 +20,7 @@
     "LICENSE"
   ],
   "bin": {
-    "ui-audit": "./bin/ui-audit.sh"
+    "myopex": "./bin/myopex.sh"
   },
   "keywords": [
     "ui-testing",

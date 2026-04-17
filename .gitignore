@@ -2,5 +2,9 @@ node_modules
 dist
 .test-screenshots
 .test-audit
+.myopex
+.myopex-*
 .ui-audit
+.audit-v*
+.claude/settings.local.json
 *.tgz

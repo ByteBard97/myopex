@@ -1,6 +1,6 @@
 // Library entry point — public API for programmatic use and type imports.
 //
-// Most users will invoke ui-audit via the CLI (`ui-audit scenarios ...`)
+// Most users will invoke myopex via the CLI (`myopex scenarios ...`)
 // rather than import this module. It's exposed for:
 //   - TypeScript users who want `Scenario` / `Step` types in their config
 //   - Advanced users who want to embed capture/diff into custom scripts
