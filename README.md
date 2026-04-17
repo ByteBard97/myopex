@@ -31,6 +31,17 @@ npx playwright install chromium
 
 Requires Node.js >= 20.
 
+### Claude Code integration (optional but recommended)
+
+If you use Claude Code, myopex ships with a skill and a `/myopex-verify` slash command that teach the agent when to run myopex and how to read the output. Install by symlinking into your Claude Code config:
+
+```bash
+ln -sfn "$(npm root -g)/myopex/claude-plugin/skills/myopex" ~/.claude/skills/myopex
+ln -sfn "$(npm root -g)/myopex/claude-plugin/commands/myopex-verify.md" ~/.claude/commands/myopex-verify.md
+```
+
+Restart or run `/reload-plugins` in Claude Code. The skill triggers automatically when you touch frontend code; `/myopex-verify` runs the full capture-diff-triage flow against a saved baseline.
+
 ---
 
 ## Quick start (2 minutes)
