@@ -1,9 +1,9 @@
-// examples/ui-audit.scenarios.ts
+// examples/myopex.scenarios.ts
 //
 // This is a reference scenario config. Copy it to your project root as
-// `ui-audit.scenarios.ts`, adapt the states to your app, then run:
+// `myopex.scenarios.ts`, adapt the states to your app, then run:
 //
-//   npx ui-audit scenarios --url http://localhost:5173 --config ui-audit.scenarios.ts
+//   npx myopex scenarios --url http://localhost:5173 --config myopex.scenarios.ts
 //
 // Three ways to describe a UI state — use whichever fits the case:
 //

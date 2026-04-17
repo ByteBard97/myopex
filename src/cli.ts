@@ -17,13 +17,13 @@ function getFlag(name: string): string | undefined {
 
 function printUsage() {
   console.log(`
-ui-audit — Structured UI snapshots for coding agents
+myopex — Structured UI snapshots for coding agents
 
 Usage:
-  ui-audit scenarios [--url <url>] --config <file> [--out <dir>]
-  ui-audit capture   [--url <url>] [--out <dir>] [--state <name>]
-  ui-audit verify    [--url <url>] [--baseline <dir>] [--state <name>]
-  ui-audit diff      --old <dir> --new <dir> [--state <name>]
+  myopex scenarios [--url <url>] --config <file> [--out <dir>]
+  myopex capture   [--url <url>] [--out <dir>] [--state <name>]
+  myopex verify    [--url <url>] [--baseline <dir>] [--state <name>]
+  myopex diff      --old <dir> --new <dir> [--state <name>]
 
 Commands:
   scenarios   Capture every UI state from a config in one browser boot (recommended)
@@ -33,14 +33,14 @@ Commands:
 
 Options:
   --url       App URL (auto-starts dev server if omitted)
-  --out       Output directory (default: .ui-audit)
-  --baseline  Baseline directory for verify (default: .ui-audit)
+  --out       Output directory (default: .myopex)
+  --baseline  Baseline directory for verify (default: .myopex)
   --state     State name (default: "default")
   --config    Path to scenario config (.ts file exporting Scenario[])
   --old       Old fingerprint directory (diff command)
   --new       New fingerprint directory (diff command)
 
-Scenario config example (ui-audit.scenarios.ts):
+Scenario config example (myopex.scenarios.ts):
 
   export default [
     { name: 'home' },
@@ -55,7 +55,7 @@ Scenario config example (ui-audit.scenarios.ts):
     ]},
   ]
 
-See examples/ui-audit.scenarios.ts for a full reference with all step types.
+See examples/myopex.scenarios.ts for a full reference with all step types.
 `)
 }
 
@@ -75,7 +75,7 @@ async function main() {
         url = server.url
         serverProc = server.process
       }
-      const outDir = getFlag('out') ?? '.ui-audit'
+      const outDir = getFlag('out') ?? '.myopex'
       const stateName = getFlag('state') ?? 'default'
       console.log(`Capturing from ${url}...`)
       await runCapture(url, outDir, stateName)
@@ -89,7 +89,7 @@ async function main() {
         url = server.url
         serverProc = server.process
       }
-      const baselineDir = getFlag('baseline') ?? '.ui-audit'
+      const baselineDir = getFlag('baseline') ?? '.myopex'
       const stateName = getFlag('state') ?? 'default'
       console.log(`Verifying ${url} against baseline...`)
       const pass = await runVerify(url, baselineDir, stateName)
@@ -122,7 +122,7 @@ async function main() {
         serverProc = server.process
       }
 
-      const outDir = getFlag('out') ?? '.ui-audit-scenarios'
+      const outDir = getFlag('out') ?? '.myopex-scenarios'
       const scenarios = await loadScenarioConfig(resolve(configPath))
       await runScenarios(url, scenarios, outDir)
     }
@@ -132,6 +132,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('ui-audit failed:', err)
+  console.error('myopex failed:', err)
   process.exit(1)
 })
