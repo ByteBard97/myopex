@@ -1,0 +1,8 @@
+{
+  "name": "myopex",
+  "displayName": "Myopex — Structured UI verification",
+  "description": "Teach Claude Code to verify UI changes using myopex: structured YAML fingerprints and per-component screenshots for every UI state, in one browser boot.",
+  "version": "0.1.0",
+  "author": "myopex",
+  "homepage": "https://github.com/ByteBard97/myopex"
+}
