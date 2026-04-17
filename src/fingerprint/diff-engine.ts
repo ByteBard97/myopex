@@ -26,6 +26,14 @@ export function diffFingerprints(
       // Skip failed resolutions — they're extraction failures, not UI bugs
       if (comp.props.resolveStatus === 'failed') continue
       for (const inv of INVARIANTS) {
+        // Testid-injected components (resolveStatus: 'fallback') are stamped
+        // role='generic' because we don't round-trip through the AX tree for
+        // them. That means we can't distinguish "transparent button
+        // inheriting its parent's bg" (intended) from "transparent container
+        // missing its theme" (bug). The other invariants (visible, overflow,
+        // zero-size) don't depend on role, so we still run those.
+        if (inv.prop === 'backgroundColor' && comp.props.resolveStatus === 'fallback') continue
+
         invariantChecks++
         const value = resolveProperty(comp.props as unknown as Record<string, unknown>, inv.prop)
         if (inv.check(value, comp.props.role)) {

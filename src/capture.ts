@@ -32,6 +32,18 @@ export async function captureFromPage(
   const compCount = Object.values(fp.regions).reduce((n, r) => n + r.components.length, 0)
   console.log(`  [${stateName}] ${regionCount} regions, ${compCount} components`)
 
+  // Loud on the silent-failure mode: regions captured but zero components.
+  // Almost always means the app's interactive elements lack data-testid or
+  // aria-label — component extraction reads the AX tree and skips unnamed
+  // nodes. Caller (scenarios.ts) may also aggregate this into a summary.
+  if (regionCount > 0 && compCount === 0) {
+    console.warn(
+      `  [${stateName}] warning: regions captured but 0 components — ` +
+      `interactive elements likely lack data-testid or aria-label. ` +
+      `Add them to key buttons/links/inputs and re-capture.`,
+    )
+  }
+
   return fp
 }
 

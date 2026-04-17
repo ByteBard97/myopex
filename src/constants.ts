@@ -9,9 +9,24 @@ export const NUMERIC_TOLERANCES: Record<string, number> = {
   y: 100,
 }
 
+/**
+ * Roles where transparent background is expected, not a bug. Interactive
+ * elements (buttons, links, menu items, list items, etc.) normally inherit
+ * their background from an ancestor container — flagging them produces a
+ * false-positive storm any time you add testids to icon-only toolbar buttons.
+ */
+const TRANSPARENT_BG_OK_ROLES = new Set([
+  'none', 'presentation',
+  'button', 'link', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
+  'tab', 'treeitem', 'option', 'listitem',
+  'checkbox', 'radio', 'switch',
+  'cell', 'gridcell', 'columnheader', 'rowheader',
+  'img', 'image',
+])
+
 export const INVARIANTS = [
   { prop: 'visible', check: (v: unknown) => v === false, msg: 'element is not visible' },
-  { prop: 'backgroundColor', check: (v: unknown, role?: string) => v === 'rgba(0, 0, 0, 0)' && role !== 'none', msg: 'transparent background — theme not applied?' },
+  { prop: 'backgroundColor', check: (v: unknown, role?: string) => v === 'rgba(0, 0, 0, 0)' && !TRANSPARENT_BG_OK_ROLES.has(role ?? ''), msg: 'transparent background — theme not applied?' },
   { prop: 'textOverflow', check: (v: unknown) => v === true, msg: 'text is overflowing / truncated' },
   { prop: 'bounds.width', check: (v: unknown) => (v as number) === 0, msg: 'zero width' },
   { prop: 'bounds.height', check: (v: unknown) => (v as number) === 0, msg: 'zero height' },
