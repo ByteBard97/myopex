@@ -1,5 +1,5 @@
 import type { Page } from 'playwright'
-import type { UIFingerprint, Region, Component, ElementProps } from '../fingerprint/types'
+import type { UIFingerprint, Region, Component, ElementProps, VueComponentNode } from '../fingerprint/types'
 import { extractAccessibilityTree, type AXNode } from './accessibility'
 import { discoverRegions, type DiscoveryConfig, type DiscoveryResult } from './region-discovery'
 import { batchResolveVisualProps, type ResolvedNode } from './cdp-resolve'
@@ -117,9 +117,14 @@ export async function buildFingerprint(
   }
 
   // Vue layer — optional, non-breaking; only runs when outDir is provided
-  const vueComponents = options?.outDir
-    ? (await buildVueTree(page, options.outDir, options.vueDepth) ?? undefined)
-    : undefined
+  let vueComponents: VueComponentNode[] | undefined
+  if (options?.outDir) {
+    try {
+      vueComponents = (await buildVueTree(page, options.outDir, options.vueDepth)) ?? undefined
+    } catch (err) {
+      console.warn('[vue-walker] buildVueTree failed, skipping:', err)
+    }
+  }
 
   return {
     version: 2,

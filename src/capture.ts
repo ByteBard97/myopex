@@ -21,7 +21,7 @@ export async function captureFromPage(
 ): Promise<UIFingerprint> {
   mkdirSync(outDir, { recursive: true })
 
-  const fp = await buildFingerprint(page, { stateName, outDir, vueDepth } as BuildOptions)
+  const fp = await buildFingerprint(page, { stateName, outDir, vueDepth })
 
   await writeScreenshots(page, fp, outDir)
   await captureFullPage(page, outDir)

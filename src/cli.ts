@@ -26,6 +26,7 @@ Usage:
   myopex verify      [--url <url>] [--baseline <dir>] [--state <name>]
   myopex diff        --old <dir> --new <dir> [--state <name>]
   myopex vue-detail  <uid> --dir <capture-dir>
+  # For scenarios: --dir .myopex-scenarios/<scenario-name>/
 
 Commands:
   scenarios    Capture every UI state from a config in one browser boot (recommended)
@@ -82,7 +83,12 @@ async function main() {
       }
       const outDir = getFlag('out') ?? '.myopex'
       const stateName = getFlag('state') ?? 'default'
-      const vueDepth = getFlag('vue-depth') ? parseInt(getFlag('vue-depth')!, 10) : undefined
+      const rawDepth = getFlag('vue-depth')
+      const vueDepth = rawDepth !== undefined ? parseInt(rawDepth, 10) : undefined
+      if (vueDepth !== undefined && (Number.isNaN(vueDepth) || vueDepth < 0)) {
+        console.error(`Invalid --vue-depth: ${rawDepth} (must be a non-negative integer)`)
+        process.exit(1)
+      }
       console.log(`Capturing from ${url}...`)
       await runCapture(url, outDir, stateName, vueDepth)
       console.log('Done.')
@@ -129,7 +135,12 @@ async function main() {
       }
 
       const outDir = getFlag('out') ?? '.myopex-scenarios'
-      const vueDepth = getFlag('vue-depth') ? parseInt(getFlag('vue-depth')!, 10) : undefined
+      const rawDepth = getFlag('vue-depth')
+      const vueDepth = rawDepth !== undefined ? parseInt(rawDepth, 10) : undefined
+      if (vueDepth !== undefined && (Number.isNaN(vueDepth) || vueDepth < 0)) {
+        console.error(`Invalid --vue-depth: ${rawDepth} (must be a non-negative integer)`)
+        process.exit(1)
+      }
       const scenarios = await loadScenarioConfig(resolve(configPath))
       await runScenarios(url, scenarios, outDir, vueDepth)
     }
