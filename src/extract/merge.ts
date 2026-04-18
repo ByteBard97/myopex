@@ -4,10 +4,13 @@ import { extractAccessibilityTree, type AXNode } from './accessibility'
 import { discoverRegions, type DiscoveryConfig, type DiscoveryResult } from './region-discovery'
 import { batchResolveVisualProps, type ResolvedNode } from './cdp-resolve'
 import type { VisualPropsResult } from './visual-props'
+import { buildVueTree } from './vue-walker'
 
 export interface BuildOptions {
   stateName?: string
   discoveryConfig?: DiscoveryConfig
+  outDir?: string
+  vueDepth?: number
 }
 
 /**
@@ -113,6 +116,11 @@ export async function buildFingerprint(
     }
   }
 
+  // Vue layer — optional, non-breaking; only runs when outDir is provided
+  const vueComponents = options?.outDir
+    ? (await buildVueTree(page, options.outDir, options.vueDepth) ?? undefined)
+    : undefined
+
   return {
     version: 2,
     page: {
@@ -127,6 +135,7 @@ export async function buildFingerprint(
     },
     regions,
     ungrouped,
+    vueComponents,
     state: {
       name: options?.stateName ?? 'default',
       modals: 'none',
