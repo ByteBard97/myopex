@@ -303,7 +303,8 @@ export async function buildVueTree(
     if (raw.truncatedChildCount !== undefined) node.truncatedChildCount = raw.truncatedChildCount
 
     // Crop screenshot from the live page
-    const slug = `vue-${raw.name}-${raw.uid}`
+    const safeName = raw.name.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 50)
+    const slug = `vue-${safeName}-${raw.uid}`
     const filename = `${slug}.png`
     try {
       await page.screenshot({
@@ -355,7 +356,11 @@ export async function buildVueTree(
     if (entry.file) detail.file = entry.file
     sidecar.components[String(entry.uid)] = detail
   }
-  writeFileSync(join(outDir, 'vue-detail.json'), JSON.stringify(sidecar, null, 2))
+  try {
+    writeFileSync(join(outDir, 'vue-detail.json'), JSON.stringify(sidecar, null, 2))
+  } catch (err) {
+    console.warn('[vue-walker] Failed to write vue-detail.json:', err)
+  }
 
   return vueComponents
 }
