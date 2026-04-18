@@ -125,6 +125,7 @@ export async function runScenarios(
   baseUrl: string,
   scenarios: Scenario[],
   outDir: string,
+  vueDepth?: number,
 ): Promise<void> {
   mkdirSync(outDir, { recursive: true })
 
@@ -178,7 +179,7 @@ export async function runScenarios(
       }
 
       // Capture fingerprint + screenshots
-      const fp = await captureFromPage(page, scenarioDir, scenario.name)
+      const fp = await captureFromPage(page, scenarioDir, scenario.name, vueDepth)
       const compCount = Object.values(fp.regions).reduce((n, r) => n + r.components.length, 0)
       outcomes.push({ name: scenario.name, status: compCount === 0 ? 'zero-components' : 'ok' })
     } catch (err) {
