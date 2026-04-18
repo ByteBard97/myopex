@@ -262,7 +262,7 @@ export async function buildVueTree(
       const sidecarSeen = new WeakSet<object>()
 
       for (const app of vueApps) {
-        const root = app._instance || app._container?._vnode?.component
+        const root = app._instance ?? app._container?._vnode?.component
         if (!root) continue
         try {
           const node = walk(root, 0, maxDepth, walkSeen)
