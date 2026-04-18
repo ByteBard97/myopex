@@ -60,12 +60,40 @@ export interface FingerprintState {
   selection: string | null
 }
 
+export interface VueComponentNode {
+  name: string
+  file?: string
+  uid: number
+  bounds: Bounds
+  props: Record<string, unknown>
+  descendantComponentCount: number
+  children: VueComponentNode[]
+  childrenTruncated?: boolean
+  truncatedChildCount?: number
+  screenshotFile?: string
+}
+
+export interface VueDetailEntry {
+  name: string
+  uid: number
+  file?: string
+  props: Record<string, unknown>
+  setupState: Record<string, unknown>
+  childUids: number[]
+}
+
+export interface VueDetailSidecar {
+  capturedAt: string
+  components: Record<string, VueDetailEntry>
+}
+
 export interface UIFingerprint {
   version: number
   page: PageMeta
   regions: Record<string, Region>
   ungrouped: Component[]
   state: FingerprintState
+  vueComponents?: VueComponentNode[]
 }
 
 export interface InvariantFailure {
