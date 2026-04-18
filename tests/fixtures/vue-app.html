@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vue Test Fixture</title>
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <style>
+    body { margin: 0; padding: 20px; font-family: sans-serif; }
+    .plant-list { width: 420px; padding: 12px; background: #f0f4f0; }
+    .plant-card { display: inline-block; width: 160px; height: 80px; margin: 4px;
+                  background: white; border: 1px solid #ccc; padding: 8px;
+                  vertical-align: top; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const { createApp, defineComponent } = Vue;
+
+    const PlantCard = defineComponent({
+      name: 'PlantCard',
+      props: { plantId: Number, label: String },
+      template: '<div class="plant-card">{{ label }}</div>'
+    });
+
+    const PlantList = defineComponent({
+      name: 'PlantList',
+      components: { PlantCard },
+      props: { title: String },
+      template: `<div class="plant-list">
+        <h3>{{ title }}</h3>
+        <PlantCard :plant-id="1" label="Coneflower" />
+        <PlantCard :plant-id="2" label="Black-eyed Susan" />
+      </div>`
+    });
+
+    const App = defineComponent({
+      name: 'App',
+      components: { PlantList },
+      template: '<PlantList title="Native Plants" />'
+    });
+
+    createApp(App).mount('#app');
+  </script>
+</body>
+</html>
