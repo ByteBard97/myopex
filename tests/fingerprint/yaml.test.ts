@@ -86,6 +86,66 @@ describe('YAML validation', () => {
   })
 })
 
+describe('vueComponents roundtrip', () => {
+  it('serialize → deserialize preserves vueComponents', () => {
+    const fp: UIFingerprint = {
+      version: 2,
+      page: {
+        url: '/',
+        title: 'Test',
+        viewport: { width: 1440, height: 900 },
+        theme: 'light',
+        background: 'white',
+        layout: 'main',
+        landmarks: ['main'],
+        capturedAt: '2026-04-18T00:00:00Z',
+      },
+      regions: {},
+      ungrouped: [],
+      state: { name: 'default', modals: 'none', selection: null },
+      vueComponents: [
+        {
+          name: 'PlantCard',
+          uid: 15,
+          bounds: { x: 10, y: 130, width: 300, height: 200 },
+          props: { plantId: 42, compact: false },
+          descendantComponentCount: 0,
+          children: [],
+          screenshotFile: 'screenshots/vue-PlantCard-15.png',
+        },
+      ],
+    }
+    const yaml = serializeFingerprint(fp)
+    const restored = deserializeFingerprint(yaml)
+    expect(restored.vueComponents).toHaveLength(1)
+    expect(restored.vueComponents![0].name).toBe('PlantCard')
+    expect(restored.vueComponents![0].uid).toBe(15)
+    expect(restored.vueComponents![0].props).toEqual({ plantId: 42, compact: false })
+  })
+
+  it('serialize → deserialize preserves fingerprint without vueComponents', () => {
+    const fp: UIFingerprint = {
+      version: 2,
+      page: {
+        url: '/',
+        title: 'Test',
+        viewport: { width: 1440, height: 900 },
+        theme: 'light',
+        background: 'white',
+        layout: 'main',
+        landmarks: [],
+        capturedAt: '2026-04-18T00:00:00Z',
+      },
+      regions: {},
+      ungrouped: [],
+      state: { name: 'default', modals: 'none', selection: null },
+    }
+    const yaml = serializeFingerprint(fp)
+    const restored = deserializeFingerprint(yaml)
+    expect(restored.vueComponents).toBeUndefined()
+  })
+})
+
 describe('YAML roundtrip', () => {
   it('serialize → deserialize preserves all data', () => {
     const original: UIFingerprint = {

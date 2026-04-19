@@ -17,10 +17,11 @@ export async function captureFromPage(
   page: Page,
   outDir: string,
   stateName: string,
+  vueDepth?: number,
 ): Promise<UIFingerprint> {
   mkdirSync(outDir, { recursive: true })
 
-  const fp = await buildFingerprint(page, { stateName } as BuildOptions)
+  const fp = await buildFingerprint(page, { stateName, outDir, vueDepth })
 
   await writeScreenshots(page, fp, outDir)
   await captureFullPage(page, outDir)
@@ -55,6 +56,7 @@ export async function runCapture(
   url: string,
   outDir: string,
   stateName: string,
+  vueDepth?: number,
 ): Promise<UIFingerprint> {
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ viewport: DEFAULT_VIEWPORT, colorScheme: 'dark' })
@@ -78,7 +80,7 @@ export async function runCapture(
   }
   await page.waitForTimeout(200)
 
-  const fp = await captureFromPage(page, outDir, stateName)
+  const fp = await captureFromPage(page, outDir, stateName, vueDepth)
 
   await browser.close()
   console.log(`  Fingerprint: ${join(outDir, stateName === 'default' ? 'fingerprint.yaml' : `fingerprint-${stateName}.yaml`)}`)
