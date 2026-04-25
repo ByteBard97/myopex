@@ -118,9 +118,14 @@ describe('vueComponents roundtrip', () => {
     const yaml = serializeFingerprint(fp)
     const restored = deserializeFingerprint(yaml)
     expect(restored.vueComponents).toHaveLength(1)
-    expect(restored.vueComponents![0].name).toBe('PlantCard')
-    expect(restored.vueComponents![0].uid).toBe(15)
-    expect(restored.vueComponents![0].props).toEqual({ plantId: 42, compact: false })
+    const node = restored.vueComponents![0]
+    expect(node.name).toBe('PlantCard')
+    expect(node.uid).toBe(15)
+    expect(node.props).toEqual({ plantId: 42, compact: false })
+    expect(node.bounds).toEqual({ x: 10, y: 130, width: 300, height: 200 })
+    expect(node.screenshotFile).toBe('screenshots/vue-PlantCard-15.png')
+    expect(node.descendantComponentCount).toBe(0)
+    expect(node.children).toEqual([])
   })
 
   it('serialize → deserialize preserves fingerprint without vueComponents', () => {

@@ -41,5 +41,23 @@ export function validateFingerprint(raw: unknown): UIFingerprint {
     throw new Error('Invalid fingerprint: "ungrouped" must be an array')
   }
 
+  if (obj.vueComponents !== undefined) {
+    if (!Array.isArray(obj.vueComponents)) {
+      throw new Error('Invalid fingerprint: "vueComponents" must be an array')
+    }
+    for (const node of obj.vueComponents as unknown[]) {
+      if (!node || typeof node !== 'object') {
+        throw new Error('Invalid fingerprint: each vueComponents entry must be an object')
+      }
+      const n = node as Record<string, unknown>
+      if (typeof n.name !== 'string') {
+        throw new Error('Invalid fingerprint: vueComponents[].name must be a string')
+      }
+      if (typeof n.uid !== 'number') {
+        throw new Error('Invalid fingerprint: vueComponents[].uid must be a number')
+      }
+    }
+  }
+
   return obj as unknown as UIFingerprint
 }

@@ -43,7 +43,7 @@ Options:
   --config     Path to scenario config (.ts file exporting Scenario[])
   --old        Old fingerprint directory (diff command)
   --new        New fingerprint directory (diff command)
-  --vue-depth  Max Vue component tree depth to include in fingerprint (default: 3)
+  --vue-depth  Max Vue component tree depth (default: 3; minimum useful value is 1; 0 = root node only)
   --dir        Capture directory for vue-detail command
 
 Scenario config example (myopex.scenarios.ts):

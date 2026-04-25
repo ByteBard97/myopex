@@ -58,6 +58,13 @@ Treat the capture as a first-class artifact you have to accept, not as exhaust f
 | `myopex capture [--url <u>] [--out <dir>] [--state <name>]` | Capture a single state | Quick sanity checks |
 | `myopex verify [--url <u>] [--baseline <dir>]` | Capture live + diff against baseline | Exits 1 on regression — CI-safe |
 | `myopex diff --old <dir> --new <dir>` | Compare two saved captures, no browser | Fastest; use after two `scenarios` runs. Auto-detects flat vs scenarios layout — point at the parent dirs and it loops over matching sub-scenarios for you |
+| `myopex vue-detail <sidecar.json>` | Pretty-print the Vue component tree from a capture's sidecar file | Reads the `.vue-detail.json` written alongside `fingerprint-*.yaml` |
+
+**Flags (capture / scenarios / verify):**
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--vue-depth <n>` | 3 | Max depth when walking the Vue component tree. Minimum useful value is `1` (root + direct children). `0` emits root only with `childrenTruncated: true`. Tree is written to `<outDir>/<state>/vue-detail.json`; `vueComponents` also appears in the fingerprint YAML. Only fires when a Vue app is detected on the page. |
 
 If `--url` is omitted, myopex auto-starts a dev server via the project's `npm run dev`.
 
@@ -111,8 +118,23 @@ regions:
           role, name, bounds, visible, backgroundColor, color, fontSize,
           display, textOverflow, resolveStatus, screenshotFile
 ungrouped: [...]       # data-testid elements outside any region
+vueComponents:         # present only when --vue-depth > 0 and a Vue app was detected
+  - name: MyComponent
+    uid: 42
+    depth: 0
+    bounds: { x, y, width, height }
+    screenshotFile: screenshots/vue-MyComponent-42.png
+    props: { ... }     # serialized component props (depth-capped at 3, functions omitted)
+    descendantComponentCount: N
+    childrenTruncated: false
+    children: [...]    # recursive; truncated when depth >= --vue-depth
 state: { name }
 ```
+
+**`vueComponents` notes:**
+- Written to fingerprint YAML and to a sidecar file `<outDir>/<state>/vue-detail.json`.
+- Read the sidecar with `myopex vue-detail <path/to/vue-detail.json>` for pretty-printed output.
+- `verify` and `diff` do **not** currently compare `vueComponents` — changes to Vue component state will not appear as regressions in `report.json`. Use the sidecar directly to spot-check Vue state between captures.
 
 **Anomaly patterns to look for** (these are almost always bugs, no baseline needed):
 - `visible: false` — element rendered but not displayed
