@@ -1,6 +1,6 @@
 {
   "name": "myopex",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Structured UI snapshots for coding agents — capture every UI state as a diffable YAML fingerprint + screenshots in one browser boot",
   "license": "MIT",
   "author": "ByteBard97",
